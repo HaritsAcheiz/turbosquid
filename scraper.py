@@ -3,7 +3,6 @@ import requests
 from selectolax.parser import HTMLParser
 from dataclasses import dataclass, asdict
 import os
-import json
 import csv
 import creds
 import re
@@ -102,7 +101,6 @@ class Scraper:
                 word = ''.join(char)
                 sentences.append(word)
         format = ", ".join(sentences)
-        print(format)
 
         polygons = re.sub('\s+',' ',tree.css_first('span#FPSpec_polygons').text().strip())
         vertices = re.sub('\s+',' ',tree.css_first('span#FPSpec_vertices').text().strip())
