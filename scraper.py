@@ -91,20 +91,19 @@ class Scraper:
         else:
             pass
         model_license = tree.css_first(r'div.flex.flex-row.px-4 > span > span:nth-of-type(1) > span').text().strip()
+
         stage1 = tree.css('div#formats-container > div')
         sentences = []
+        format = ''
         for x in stage1[1:]:
             stage2 = x.css('span')
             for y in stage2:
                 char = re.sub('\n','',y.text().strip())
                 word = ''.join(char)
-                if word == ' ':
-                    word = ', '
-                else:
-                    pass
                 sentences.append(word)
-            for sentence in sentences:
-            format = ", ".join(sentences)
+        format = ", ".join(sentences)
+        print(format)
+
         polygons = re.sub('\s+',' ',tree.css_first('span#FPSpec_polygons').text().strip())
         vertices = re.sub('\s+',' ',tree.css_first('span#FPSpec_vertices').text().strip())
         if tree.css_first('span#FPSpec_textures'):
@@ -148,7 +147,6 @@ class Scraper:
     def to_csv(self, datas, filename, headers):
         try:
             for data in datas:
-                print(data)
                 try:
                     file_exists = os.path.isfile(filename)
                     with open(filename, 'a', encoding='utf-8') as f:
@@ -232,15 +230,7 @@ class Scraper:
             print(f'add detail from {detail_url}')
         self.to_csv(items, 'result.csv', headers=headers)
 
-        # responses = []
-        # trial = 1
-        # while trial < 3:
-        #     try:
-        #         responses = asyncio.run(self.run(set(detail_urls)))
-        #         break
-        #     except:
-        #         trial += 1
-
+        # responses = asyncio.run(self.run(set(detail_urls)))
         # items = [self.get_detail(response) for response in responses]
         # self.to_csv(items, 'result.csv', headers=headers)
 
