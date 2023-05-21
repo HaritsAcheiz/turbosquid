@@ -54,25 +54,26 @@ class Scraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         }
 
-        async with s.get(url, headers=headers, proxy=proxies, timeout=7) as r:
+        async with s.post(url, headers=headers, proxy=proxies, timeout=7) as r:
             if r.status != 200:
                 r.raise_for_status()
 
-            return await r.text()
+            return await r.json()
 
-    async def fetch_all(self, s, urls):
+    async def fetch_all(self, s, ids):
         tasks = list()
+        urls = [f'https://www.turbosquid.com/API/v1/Search/Preview/{id}' for id in ids]
         for url in urls:
             task = asyncio.create_task(self.fetch_detail(s, url))
             tasks.append(task)
         res = await asyncio.gather(*tasks)
         return res
 
-    async def run(self, urls):
+    async def run(self, ids):
         session_timeout = aiohttp.ClientTimeout(total=None, sock_connect=7, sock_read=10)
         async with aiohttp.ClientSession(timeout=session_timeout) as s:
-            htmls = await self.fetch_all(s, urls)
-        return htmls
+            json_datas = await self.fetch_all(s, ids)
+        return json_datas
 
     def get_detail(self, r):
         tree = HTMLParser(r.text)
@@ -141,6 +142,17 @@ class Scraper:
             detail_url = sub.css_first(detail_url_loc).attributes['data-link']
             detail_urls.append(detail_url)
         return detail_urls
+
+    def get_id(self, r):
+        locator = 'div#SearchResultAssets > div.search-lab.AssetTile-md.tile-large'
+        detail_url_loc = 'div.AssetInner > div'
+        tree = HTMLParser(r.text)
+        staging = tree.css(locator)
+        ids = []
+        for sub in staging:
+            id = sub.css_first(detail_url_loc).attributes['data-id']
+            ids.append(ids)
+        return ids
 
     def to_csv(self, datas, filename, headers):
         try:
@@ -211,7 +223,7 @@ class Scraper:
         self.detail_to_csv(set(detail_urls), 'detail_result2.csv')
         print('Scrape detail url completed')
         items = []
-        for detail_url in set(detail_urls):
+        for i, detail_url in enumerate(set(detail_urls)):
             trial = 1
             while trial < 3:
                 print(f'Get item details from {detail_url}')
@@ -225,7 +237,7 @@ class Scraper:
                     time.sleep(3)
                     print('try to reconnect')
                     trial += 1
-            print(f'detail added')
+            print(f'{i} detail added from {len(set(detail_urls))}')
         self.to_csv(items, 'result.csv', headers=headers)
 
         # responses = asyncio.run(self.run(set(detail_urls)))
