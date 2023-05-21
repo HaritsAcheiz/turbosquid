@@ -182,7 +182,7 @@ class Scraper:
 
     def main(self):
         search_term = input('What do you want to search? ')
-        page_num = 44
+        page_num = 1
         detail_urls = []
         trial = 1
         headers = ['model_name', 'product_id', 'publish_date', 'page_link', 'download_link', 'price', 'model_license',
@@ -211,10 +211,10 @@ class Scraper:
         self.detail_to_csv(set(detail_urls), 'detail_result2.csv')
         print('Scrape detail url completed')
         items = []
-        trial = 1
         for detail_url in set(detail_urls):
+            trial = 1
             while trial < 3:
-                print('Get item details...')
+                print(f'Get item details from {detail_url}')
                 try:
                     r = self.fetch(detail_url)
                     items.append(self.get_detail(r))
@@ -225,7 +225,7 @@ class Scraper:
                     time.sleep(3)
                     print('try to reconnect')
                     trial += 1
-            print(f'add detail from {detail_url}')
+            print(f'detail added')
         self.to_csv(items, 'result.csv', headers=headers)
 
         # responses = asyncio.run(self.run(set(detail_urls)))
