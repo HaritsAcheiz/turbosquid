@@ -18,7 +18,8 @@ class Item:
     vertices: str
     textures: str
     materials: str
-    uv: str
+    unwarped_uvs: str
+    uv_mapped: str
 
 @dataclass
 class Scraper:
@@ -50,15 +51,30 @@ class Scraper:
         response = await client.get(url)
         json_data = response.json()
         json_formatted_str = json.dumps(json_data, indent=2)
-        # print(json_formatted_str)
-        return json_formatted_str
+        print(json_formatted_str)
+        model_name = json_data['STCPRODUCT']['PRODUCT_NAME']
+        product_id = json_data['STCPRODUCT']['ACTION_HTML'].split('/')[-1]
+        publish_date = ''
+        page_link = json_data['STCPRODUCT']['PRODUCT_LINK']
+        download_link = ''
+        price = HTMLParser(json_data['STCPRODUCT']['PRICE_HTML']).text()
+        model_license = HTMLParser(json_data['STCPRODUCT']['LICENSE_HTML']).css_first('a').text()
+        format = "".join([x.text().strip() for x in HTMLParser(json_data['STCPRODUCT']['PRODUCT_FILES_HTML']).css('li')])
+        polygons = HTMLParser(json_data['STCPRODUCT']['SPECIFICATION_HTML']).css_first('li#preview_details_specification_polygons').text()
+        vertices = HTMLParser(json_data['STCPRODUCT']['SPECIFICATION_HTML']).css_first('li#preview_details_specification_vertices').text()
+        textures = HTMLParser(json_data['STCPRODUCT']['SPECIFICATION_HTML']).css_first('li#preview_details_specification_textures').text()
+        materials = HTMLParser(json_data['STCPRODUCT']['SPECIFICATION_HTML']).css_first('li#preview_details_specification_materials').text()
+        unwarped_uvs = HTMLParser(json_data['STCPRODUCT']['SPECIFICATION_HTML']).css_first('li#preview_details_specification_unwrapped_uvs').text()
+        uv_mapped = HTMLParser(json_data['STCPRODUCT']['SPECIFICATION_HTML']).css_first('li#preview_details_specification_uv_mapped').text()
+
+        return
 
     async def fetch_all_detail(self, ids):
         async with httpx.AsyncClient() as client:
             tasks = []
             for id in ids[0:2]:
                 url = f'https://www.turbosquid.com/API/v1/Search/Preview/{id}'
-                tasks.append(self.fetch_id(client,url))
+                tasks.append(self.fetch_detail(client,url))
 
             data = await asyncio.gather(*tasks)
             print(data)
@@ -68,7 +84,7 @@ class Scraper:
 if __name__ == '__main__':
     s=Scraper()
     ids = asyncio.run(s.fetch_all_id())
-    print(ids)
+    data = asyncio.run(s.fetch_all_detail(ids))
 #
 #
 # url = f'https://www.turbosquid.com/3d-model/sofa?page_num={page_num}&page_size=500&sort_column=a7&sort_order=desc'
