@@ -54,7 +54,7 @@ class Scraper:
         urls = [f'https://www.turbosquid.com/3d-model/{keyword}?page_num={page_num}&page_size=500&sort_column=a7&sort_order=desc' for page_num in range(1, int(last_page)+1)]
 
         async with httpx.AsyncClient(proxies=proxies) as client:
-            tasks = [asyncio.create_task(self.fetch_id(client,url)) for url in urls]
+            tasks = [asyncio.create_task(self.fetch_id(client,url)) for url in urls[0:2]]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
             return responses
 
@@ -99,7 +99,10 @@ class Scraper:
             page_link = json_data['STCPRODUCT']['PRODUCT_LINK']
             download_link = ''
             price = HTMLParser(json_data['STCPRODUCT']['PRICE_HTML']).text()
-            model_license = HTMLParser(json_data['STCPRODUCT']['LICENSE_HTML']).css_first('a').text()
+            try:
+                model_license = HTMLParser(json_data['STCPRODUCT']['LICENSE_HTML']).css_first('span').text()
+            except:
+                model_license = None
             format = ", ".join([re.sub(r'\n                     ', ' | ', x.text().strip()) for x in
                                 HTMLParser(json_data['STCPRODUCT']['PRODUCT_FILES_HTML']).css('li')])
             polygons = HTMLParser(json_data['STCPRODUCT']['SPECIFICATIONS_HTML']).css_first(
