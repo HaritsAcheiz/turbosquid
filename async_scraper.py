@@ -7,6 +7,12 @@ import re
 import csv
 import os
 import creds
+from selenium.webdriver import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
 
 @dataclass
 class Item:
@@ -169,6 +175,28 @@ class Scraper:
         except:
             pass
 
+    def get_cookies(self, url, ):
+        useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        ff_opt = Options()
+        # ff_opt.add_argument('-headless')
+        ff_opt.add_argument('--no-sanbox')
+        ff_opt.set_preference("general.useragent.override", useragent)
+        ff_opt.page_load_strategy = 'eager'
+        driver = WebDriver(options=ff_opt)
+        driver.get(url)
+        WebDriverWait(driver, 10).until(
+            ec.element_to_be_clickable((By.CSS_SELECTOR, 'a.navbar-menu.anonymous'))).click()
+        WebDriverWait(driver, 10).until(
+            ec.presence_of_element_located((By.CSS_SELECTOR, 'input#authentication_method_email'))).send_keys(
+            creds.username + Keys.RETURN)
+        # el = driver.find_element(By.CSS_SELECTOR, 'form#new_user > input[name="utf8"]')
+        # ActionChains(driver).move_to_element(el).click(el).send_keys(pw + Keys.RETURN).perform()
+        element = WebDriverWait(driver, 10).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'input#user_password')))
+        element.click()
+        element.send_keys(creds.pw + Keys.RETURN)
+
+        # driver.close()
+        return
 
     async def main(self):
         keyword = input('What do you want to search? ')
