@@ -28,7 +28,7 @@ class Item:
     vertices: str
     textures: str
     materials: str
-    unwarped_uvs: str
+    unwrapped_uvs: str
     uv_mapped: str
 
 @dataclass
@@ -79,7 +79,6 @@ class Scraper:
         response = await client.get(url, timeout=10.0)
         return response.json()
 
-
     async def fetch_all_detail(self, ids):
         proxies = {
             'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
@@ -99,7 +98,10 @@ class Scraper:
             json_data = response
             # json_formatted_str = json.dumps(json_data, indent=2)
             # print(json_formatted_str)
-            model_name = json_data['STCPRODUCT']['PRODUCT_NAME']
+            try:
+                model_name = json_data['STCPRODUCT']['PRODUCT_NAME']
+            except TypeError:
+                continue
             product_id = HTMLParser(json_data['STCPRODUCT']['ACTION_HTML']).css_first('a').attributes['data-id']
             publish_date = ''
             page_link = json_data['STCPRODUCT']['PRODUCT_LINK']
@@ -126,10 +128,10 @@ class Scraper:
             else:
                 materials = 'No'
             if HTMLParser(json_data['STCPRODUCT']['SPECIFICATIONS_HTML']).css_first(
-                    'li#preview_details_specification_unwarped_uvs'):
-                unwarped_uvs = 'Yes'
+                    'li#preview_details_specification_unwrapped_uvs'):
+                unwrapped_uvs = 'Yes'
             else:
-                unwarped_uvs = 'No'
+                unwrapped_uvs = 'No'
             if HTMLParser(json_data['STCPRODUCT']['SPECIFICATIONS_HTML']).css_first(
                     'li#preview_details_specification_uv_mapped'):
                 uv_mapped = 'Yes'
@@ -148,7 +150,7 @@ class Scraper:
                                 vertices=vertices,
                                 textures=textures,
                                 materials=materials,
-                                unwarped_uvs=unwarped_uvs,
+                                unwrapped_uvs=unwrapped_uvs,
                                 uv_mapped=uv_mapped))
             datas.append(data)
         return datas
@@ -156,7 +158,7 @@ class Scraper:
 
     def to_csv(self, datas, filename):
         headers = ['model_name', 'product_id', 'publish_date', 'page_link', 'download_link', 'price', 'model_license',
-                   'format', 'polygons', 'vertices', 'textures', 'materials', 'unwarped_uvs', 'uv_mapped']
+                   'format', 'polygons', 'vertices', 'textures', 'materials', 'unwrapped_uvs', 'uv_mapped']
         try:
             for data in datas:
                 try:
@@ -207,8 +209,8 @@ class Scraper:
         print('Getting Details...')
         responses = await self.fetch_all_detail(ids)
         datas = s.parse_detail(responses)
-        print(f'Saving data to {keyword}_result.csv')
-        s.to_csv(datas, f'{keyword}_result.csv')
+        print(f'Saving data to {keyword}_result2.csv')
+        s.to_csv(datas, f'{keyword}_result2.csv')
         print('Scraping data is done!')
 
 if __name__ == '__main__':
