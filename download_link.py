@@ -11,6 +11,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 import pandas as pd
+from selenium.webdriver.common.action_chains import ActionChains
 
 @dataclass
 class Download_link:
@@ -18,7 +19,7 @@ class Download_link:
     def webdriver_setup(self):
         useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         ff_opt = Options()
-        # ff_opt.add_argument('-headless')
+        ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sanbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
@@ -27,6 +28,7 @@ class Download_link:
         return driver
 
     def get_download_link(self, driver, url, username, pw, free_id):
+        driver.fullscreen_window()
         driver.get(url)
 
         #login
@@ -37,16 +39,19 @@ class Download_link:
         element.send_keys(pw + Keys.RETURN)
 
         #search
-        WebDriverWait(driver, 10).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'input#NavTextField'))).send_keys(free_id + Keys.RETURN)
+        WebDriverWait(driver, 10).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'input#NavTextField'))).send_keys(str(free_id) + Keys.RETURN)
         download_loc = (By.CSS_SELECTOR, 'div.row_lab > div.shortContainer > div.purchaseSection > div.btn-container > a#FPAddToCart > button')
         WebDriverWait(driver, 10).until(ec.element_to_be_clickable(download_loc))
         cookies = driver.get_cookies()
+        print(cookies)
 
         # logout
         element = driver.find_element(By.CSS_SELECTOR, 'div.user-wrap > a#nav_login')
-        element.move_to_element(element)
-        WebDriverWait(driver,10).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.content.content-model.user > ul > li:nth-of-type(5) > a'))).click()
-        # driver.close()
+        hidden_element = driver.find_element(By.CSS_SELECTOR, 'div.content.content-model.user > ul > li:nth-of-type(5) > a')
+        ActionChains(driver).move_to_element(element).click(hidden_element)
+        # WebDriverWait(driver,10).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.content.content-model.user > ul > li:nth-of-type(5) > a'))).click()
+
+        driver.close()
         return cookies
 
     def to_download_page(self, cookies, free_urls):
@@ -57,8 +62,11 @@ class Download_link:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         }
-        s = httpx.Client(headers=headers, cookies=cookie_jar)
+        s = httpx.Client(headers=headers)
+        for cookie in cookie_jar:
+            s.cookies.set(cookie['name'], cookie['value'])
         response = s.get('https://auth.turbosquid.com/users/sign_in')
+        print(response)
 
     def get_free_urls(self):
         df = pd.read_csv('sofa_result.csv')
@@ -72,7 +80,5 @@ if __name__ == '__main__':
     free_urls, free_ids= d.get_free_urls()
     driver = d.webdriver_setup()
     cookies = d.get_download_link(driver, base_url, username=creds.username, pw=creds.pw, free_id=free_ids[0])
-
-    # print('=======================================')
-    # print(d.to_download_page(cookies))
-
+    print('=======================================')
+    print(d.to_download_page(cookies, free_urls=free_urls[0]))
