@@ -162,10 +162,13 @@ class Scraper:
         try:
             for data in datas:
                 try:
-                    file_exists = os.path.isfile(filename)
-                    with open(filename, 'a', encoding='utf-8') as f:
+                    # file_exists = os.path.isfile(filename)
+                    folder_path = os.path.join(os.getcwd(), 'ids')
+                    os.makedirs(folder_path, exist_ok=True)
+                    file_path = os.path.join(folder_path, filename)
+                    with open(file_path, 'a', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, delimiter=',', lineterminator='\n', fieldnames=headers)
-                        if not file_exists:
+                        if os.path.getsize(file_path) == 0:
                             writer.writeheader()
                         if data != None:
                             writer.writerow(data)
@@ -191,8 +194,6 @@ class Scraper:
         WebDriverWait(driver, 10).until(
             ec.presence_of_element_located((By.CSS_SELECTOR, 'input#authentication_method_email'))).send_keys(
             creds.username + Keys.RETURN)
-        # el = driver.find_element(By.CSS_SELECTOR, 'form#new_user > input[name="utf8"]')
-        # ActionChains(driver).move_to_element(el).click(el).send_keys(pw + Keys.RETURN).perform()
         element = WebDriverWait(driver, 10).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'input#user_password')))
         element.click()
         element.send_keys(creds.pw + Keys.RETURN)

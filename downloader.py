@@ -1,4 +1,6 @@
 import os
+import glob
+
 import httpx
 from dataclasses import dataclass
 import creds
@@ -113,21 +115,33 @@ class Download_link:
 
 
     def get_free_ids(self):
-        df = pd.read_csv('sofa_result.csv')
-        free_ids = list(df[df['price'] == 'Free']['product_id'])
-        return free_ids
+        folder_path = os.path.join(os.getcwd(), 'ids')
+        file_pattern = '*.csv'
+        file_paths = glob.glob(os.path.join(folder_path, file_pattern))
+
+        data_list = []
+        for file_path in file_paths:
+            df = pd.read_csv(file_path)
+            data_list.append(df)
+        combined_df = pd.concat(data_list)
+
+        return list(combined_df['product_id'])
 
 
     def main(self):
-        # cookies = self.getCookies()
-        # print(cookies)
-        cookies = [{'name': '_gaexp', 'value': 'GAX1.2.SNZDkz_8Q9mdK2o-StOSYQ.19589.1!siH7jPeaSTWjI9V3wjuEGA.19594.1', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1692921600, 'sameSite': 'None'}, {'name': '_gcl_au', 'value': '1.1.1068677332.1685224236', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1693000236, 'sameSite': 'None'}, {'name': '_ga', 'value': 'GA1.2.610493474.1685224237', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1748296236, 'sameSite': 'None'}, {'name': '_gid', 'value': 'GA1.2.792416333.1685224237', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1685310636, 'sameSite': 'None'}, {'name': '_gat_UA-227915-1', 'value': '1', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1685224296, 'sameSite': 'None'}, {'name': '_clck', 'value': '1b1k9pe|2|fby|0|1242', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1716760237, 'sameSite': 'None'}, {'name': 'SnapABugRef', 'value': 'https%3A%2F%2Fwww.turbosquid.com%2F%20', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': False, 'expiry': 1685231438, 'sameSite': 'None'}, {'name': 'SnapABugHistory', 'value': '1#', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': False, 'expiry': 1716760238, 'sameSite': 'None'}, {'name': 'SnapABugUserAlias', 'value': '%23', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': False, 'expiry': 1716760238, 'sameSite': 'None'}, {'name': 'SnapABugVisit', 'value': '1#1685224238', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': False, 'sameSite': 'None'}, {'name': 'cfid', 'value': '53840d57-2d9b-4cae-9012-82431bc5711e', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': True, 'expiry': 2631850930, 'sameSite': 'None'}, {'name': 'cftoken', 'value': '0', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': True, 'expiry': 2631850930, 'sameSite': 'None'}, {'name': 'M', 'value': '637EEB26-CC53-406C-A42F-43F219BEE6C3', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': True, 'expiry': 2631850930, 'sameSite': 'None'}, {'name': '_uetsid', 'value': '8518c6e0fcd811eda48745e65ec5379c', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1685310644, 'sameSite': 'None'}, {'name': '_uetvid', 'value': '8518ea80fcd811ed8ac2e5690cef7633', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1718920244, 'sameSite': 'None'}, {'name': '_clsk', 'value': '1cs2oao|1685224246596|2|1|x.clarity.ms/collect', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1685310646, 'sameSite': 'None'}, {'name': 'M20UR15', 'value': '%7B%22s%22%3A%22F4CEA8B6-91CB-4253-9975-A1741A50FAB9%22%2C%22csrf%22%3A%226192FC468082A75B4563ED621AA6B4967B65F114%22%2C%22d%22%3A%222023-05-27T21%3A55%3A40Z%22%2C%22clnt%22%3A%221%22%2C%22name%22%3A%22KM-member3536253678%22%2C%22email%22%3A%22naruoutlet%40gmail.com%22%2C%22industry%22%3A%22Game%20Developer%20-%20PC%2FConsole%2FMobile%22%2C%22application%22%3A%223ds%20Max%22%2C%22engine%22%3A%22Unity%22%7D', 'path': '/', 'domain': '.www.turbosquid.com', 'secure': True, 'httpOnly': False, 'expiry': 1687816250, 'sameSite': 'None'}, {'name': '_M20UR15', 'value': 'A7338C7B32EB257E3F2CA7F4AB3913BF', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': True, 'httpOnly': True, 'expiry': 1686088250, 'sameSite': 'None'}, {'name': 'OSD', 'value': '%7B%22eligible_cart%22%3A0%2C%22code%22%3A%22%22%7D', 'path': '/', 'domain': 'www.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1685397050, 'sameSite': 'None'}, {'name': '_hp2_props.3723677730', 'value': '%7B%22Logged%20In%22%3A%22true%22%7D', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1719301850, 'sameSite': 'Lax'}, {'name': '_hp2_ses_props.3723677730', 'value': '%7B%22z%22%3A0%2C%22ts%22%3A1685224239478%2C%22d%22%3A%22www.turbosquid.com%22%2C%22h%22%3A%22%2F%22%2C%22t%22%3A%223D%20Models%20for%20Professionals%20%3A%3A%20TurboSquid%22%7D', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1685226050, 'sameSite': 'Lax'}, {'name': '_hp2_id.3723677730', 'value': '%7B%22userId%22%3A%226611536676460406%22%2C%22pageviewId%22%3A%223129088425086254%22%2C%22sessionId%22%3A%221464417461816490%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D', 'path': '/', 'domain': '.turbosquid.com', 'secure': False, 'httpOnly': False, 'expiry': 1719301850, 'sameSite': 'Lax'}]
+        print("Getting cookies...")
+        cookies = self.getCookies()
+        print("Reading ids...")
         free_ids = self.get_free_ids()
-        for id in free_ids:
+        for i, id in enumerate(free_ids):
             if id != free_ids[-1]:
+                print(f"Downloading item {id}...({i}of{len(free_ids)})")
                 self.exportItem(id, cookies=cookies)
+                print("Download Succeed")
             else:
+                print(f"Downloading item {id}...({i}of{len(free_ids)})")
                 self.toDownloadPage(id, cookies=cookies)
+                print("Download Completed")
 
 if __name__ == '__main__':
     d = Download_link()
