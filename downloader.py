@@ -21,7 +21,7 @@ class Download_link:
         latitude = 37.7749
         longitude = -122.4194
         ff_opt = Options()
-        # ff_opt.add_argument('-headless')
+        ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sanbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
