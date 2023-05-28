@@ -1,6 +1,5 @@
 import httpx
 from selectolax.parser import HTMLParser
-import json
 import asyncio
 from dataclasses import dataclass, asdict
 import re
@@ -18,9 +17,9 @@ from selenium.webdriver.support import expected_conditions as ec
 class Item:
     model_name: str
     product_id: str
-    publish_date: str
+    # publish_date: str
     page_link: str
-    download_link: str
+    # download_link: str
     price: str
     model_license: str
     format: str
@@ -39,7 +38,7 @@ class Scraper:
             'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
-        url = f'https://www.turbosquid.com/3d-model/{keyword}?page_size=500&sort_column=a7&sort_order=desc'
+        url = f'https://www.turbosquid.com/Search/3D-Models/free/{keyword}?page_size=500'
         with httpx.Client() as client:
             response = client.get(url)
         tree = HTMLParser(response.text)
@@ -57,10 +56,10 @@ class Scraper:
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
 
-        urls = [f'https://www.turbosquid.com/3d-model/{keyword}?page_num={page_num}&page_size=500&sort_column=a7&sort_order=desc' for page_num in range(1, int(last_page)+1)]
+        urls = [f'https://www.turbosquid.com/3d-model/free/{keyword}?page_num={page_num}&page_size=500' for page_num in range(1, int(last_page)+1)]
 
         async with httpx.AsyncClient(proxies=proxies) as client:
-            tasks = [asyncio.create_task(self.fetch_id(client,url)) for url in urls[0:2]]
+            tasks = [asyncio.create_task(self.fetch_id(client,url)) for url in urls]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
             return responses
 
@@ -68,10 +67,11 @@ class Scraper:
     def parse_id(self, responses):
         staging_loc = 'div#SearchResultAssets > div.search-lab.AssetTile-md.tile-large'
         detail_url_loc = 'div.AssetInner > div'
+        item_ids = []
         for response in responses:
             tree = HTMLParser(response)
             staging = tree.css(staging_loc)
-            item_ids = [article.css_first(detail_url_loc).attributes['data-id'] for article in staging]
+            item_ids.extend([article.css_first(detail_url_loc).attributes['data-id'] for article in staging])
         return item_ids
 
 
@@ -140,9 +140,9 @@ class Scraper:
 
             data = asdict(Item(model_name=model_name,
                                 product_id=product_id,
-                                publish_date=publish_date,
+                                # publish_date=publish_date,
                                 page_link=page_link,
-                                download_link=download_link,
+                                # download_link=download_link,
                                 price=price,
                                 model_license=model_license,
                                 format=format,
@@ -157,7 +157,7 @@ class Scraper:
 
 
     def to_csv(self, datas, filename):
-        headers = ['model_name', 'product_id', 'publish_date', 'page_link', 'download_link', 'price', 'model_license',
+        headers = ['model_name', 'product_id', 'page_link', 'price', 'model_license',
                    'format', 'polygons', 'vertices', 'textures', 'materials', 'unwrapped_uvs', 'uv_mapped']
         try:
             for data in datas:
@@ -180,7 +180,7 @@ class Scraper:
     def get_cookies(self, url, ):
         useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         ff_opt = Options()
-        # ff_opt.add_argument('-headless')
+        ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sanbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
@@ -197,22 +197,33 @@ class Scraper:
         element.click()
         element.send_keys(creds.pw + Keys.RETURN)
 
-        # driver.close()
-        return
+        driver.close()
 
     async def main(self):
         keyword = input('What do you want to search? ')
         print('Getting Product IDs...')
         last_page = self.get_page(keyword)
-        responses = await self.fetch_all_id(keyword, last_page)
-        ids = s.parse_id(responses)
+        page_responses = []
+        page_responses.extend(await self.fetch_all_id(keyword, last_page))
+        ids = s.parse_id(page_responses)
         print('Getting Details...')
-        responses = await self.fetch_all_detail(ids)
+        responses = []
+        responses.extend(await self.fetch_all_detail(ids))
         datas = s.parse_detail(responses)
-        print(f'Saving data to {keyword}_result2.csv')
-        s.to_csv(datas, f'{keyword}_result2.csv')
+        datas = [data for data in datas if data['price'] == 'Free']
+        print(f'Saving data to {keyword}_result.csv')
+        s.to_csv(datas, f'{keyword}_result.csv')
         print('Scraping data is done!')
+        return responses
 
 if __name__ == '__main__':
     s=Scraper()
-    asyncio.run(s.main())
+    responses = asyncio.run(s.main())
+    errors = 0
+    successes = 0
+    for response in responses:
+        if 'Error' in response:
+            errors += 1
+        else:
+            successes += 1
+    print(f"Status (Successes:{successes}, Errors:{errors})")
