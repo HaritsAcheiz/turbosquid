@@ -1,9 +1,6 @@
 import os
-import time
-
 import httpx
-from selectolax.parser import HTMLParser
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import creds
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -12,7 +9,6 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 import pandas as pd
-from selenium.webdriver.common.action_chains import ActionChains
 
 @dataclass
 class Download_link:
@@ -82,7 +78,6 @@ class Download_link:
             response = client.get(url)
         with open(filepath, "wb") as f:
             f.write(response.content)
-        # 'https://www.turbosquid.com/Download/2017180_68193772'
 
 
     def toDownloadPage(self, id, cookies):
@@ -133,12 +128,6 @@ class Download_link:
                 self.exportItem(id, cookies=cookies)
             else:
                 self.toDownloadPage(id, cookies=cookies)
-
-
-        # button_url = self.exportItem(free_ids, cookies=cookies)
-        # print(button_url)
-        # self.toDownloadPage(url=button_url, cookies=cookies)
-
 
 if __name__ == '__main__':
     d = Download_link()
