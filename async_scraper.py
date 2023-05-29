@@ -74,7 +74,6 @@ class Scraper:
             item_ids.extend([article.css_first(detail_url_loc).attributes['data-id'] for article in staging])
         return item_ids
 
-
     async def fetch_detail(self, client, url):
         response = await client.get(url, timeout=None)
         return response.json()
@@ -87,7 +86,7 @@ class Scraper:
 
         urls = [f'https://www.turbosquid.com/API/v1/Search/Preview/{id}' for id in ids if id.isnumeric()]
         async with httpx.AsyncClient(proxies=proxies) as client:
-            tasks = [asyncio.create_task(self.fetch_detail(client,url)) for url in urls]
+            tasks = [asyncio.create_task(self.fetch_detail(client, url)) for url in urls]
             datas = await asyncio.gather(*tasks, return_exceptions=True)
             return datas
 
