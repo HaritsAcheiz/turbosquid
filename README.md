@@ -1,4 +1,6 @@
 # Turbosquid
+The Python application from the repository you mentioned is called "turbosquid." It is a web scraping tool designed to fetch information about 3D models from the TurboSquid website.
+
 Steps by step to install and run the script from the "turbosquid" repository:
 
 1. Download the repository:
