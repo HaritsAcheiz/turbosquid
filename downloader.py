@@ -1,5 +1,6 @@
 import os
 import glob
+import time
 
 import httpx
 from dataclasses import dataclass
@@ -76,7 +77,7 @@ class Download_link:
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         }
 
-        with httpx.Client(headers=headers) as client:
+        with httpx.Client(headers=headers, follow_redirects=True) as client:
             response = client.get(url)
         with open(filepath, "wb") as f:
             f.write(response.content)
@@ -96,6 +97,7 @@ class Download_link:
 
         # download page
         items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
+        print('Downloading...')
         for i, item in enumerate(items,start=1):
             if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
                 folderpath = os.path.join(os.getcwd(), fr"result\{item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}")
@@ -134,14 +136,26 @@ class Download_link:
         print("Reading ids...")
         free_ids = self.get_free_ids()
         for i, id in enumerate(free_ids, start=1):
-            if id != free_ids[-1]:
-                print(f"Downloading item {id}...({i} of {len(free_ids)})")
-                self.exportItem(id, cookies=cookies)
-                print("Download Succeed")
-            else:
-                print(f"Downloading item {id}...({i} of {len(free_ids)})")
-                self.toDownloadPage(id, cookies=cookies)
-                print("Download Completed")
+            retries = 3
+            retry_delay = 0.1
+            for _ in range(retries):
+                if id != free_ids[-1]:
+                    try:
+                        print(f"Adding item {id}...({i} of {len(free_ids)})")
+                        self.exportItem(id, cookies=cookies)
+                        break
+                    except:
+                        print("Retrying...")
+                        time.sleep(retry_delay)
+                else:
+                    try:
+                        print(f"Adding item {id}...({i} of {len(free_ids)})")
+                        self.toDownloadPage(id, cookies=cookies)
+                        print("Download Completed")
+                        break
+                    except:
+                        print("Retrying...")
+                        time.sleep(retry_delay)
 
 if __name__ == '__main__':
     d = Download_link()
