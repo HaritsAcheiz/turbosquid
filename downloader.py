@@ -133,13 +133,13 @@ class Download_link:
         cookies = self.getCookies()
         print("Reading ids...")
         free_ids = self.get_free_ids()
-        for i, id in enumerate(free_ids):
+        for i, id in enumerate(free_ids, start=1):
             if id != free_ids[-1]:
-                print(f"Downloading item {id}...({i}of{len(free_ids)})")
+                print(f"Downloading item {id}...({i} of {len(free_ids)})")
                 self.exportItem(id, cookies=cookies)
                 print("Download Succeed")
             else:
-                print(f"Downloading item {id}...({i}of{len(free_ids)})")
+                print(f"Downloading item {id}...({i} of {len(free_ids)})")
                 self.toDownloadPage(id, cookies=cookies)
                 print("Download Completed")
 

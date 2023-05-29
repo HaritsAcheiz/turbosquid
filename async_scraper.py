@@ -46,7 +46,7 @@ class Scraper:
 
 
     async def fetch_id(self, client, url):
-        response = await client.get(url, timeout=10.0)
+        response = await client.get(url, timeout=None)
         return response.text
 
 
@@ -76,7 +76,7 @@ class Scraper:
 
 
     async def fetch_detail(self, client, url):
-        response = await client.get(url, timeout=10.0)
+        response = await client.get(url, timeout=None)
         return response.json()
 
     async def fetch_all_detail(self, ids):
