@@ -1,3 +1,5 @@
+import time
+
 import httpx
 from selectolax.parser import HTMLParser
 import asyncio
@@ -46,8 +48,15 @@ class Scraper:
 
 
     async def fetch_id(self, client, url):
-        response = await client.get(url, timeout=None)
-        return response.text
+        retries = 3
+        retry_delay = 0.3
+        for _ in range(retries):
+            try:
+                response = await client.get(url, timeout=None)
+                return response.text
+            except:
+                await asyncio.sleep(retry_delay)
+        return ''
 
 
     async def fetch_all_id(self, keyword, last_page):
@@ -75,8 +84,15 @@ class Scraper:
         return item_ids
 
     async def fetch_detail(self, client, url):
-        response = await client.get(url, timeout=None)
-        return response.json()
+        retries = 3
+        retry_delay = 0.3
+        for _ in range(retries):
+            try:
+                response = await client.get(url, timeout=None)
+                return response.json()
+            except:
+                await asyncio.sleep(retry_delay)
+        return ''
 
     async def fetch_all_detail(self, ids):
         proxies = {
