@@ -1,49 +1,62 @@
-# turbosquid
+# Turbosquid
 Steps by step to install and run the script from the "turbosquid" repository:
 
-1. Download the repository: In a web browser, navigate to the repository's page on GitHub (https://github.com/HaritsAcheiz/turbosquid). Click on the green "Code" button and select "Download ZIP" to download the repository as a ZIP file.
+1. Download the repository:
+   - Go to the turbosquid repository on GitHub: https://github.com/HaritsAcheiz/turbosquid
+   - Click on the green "Code" button and select "Download ZIP".
+   - Save the ZIP file to a location on the client's computer.
 
-2. Extract the ZIP file: Once the ZIP file is downloaded, you should extract its contents to a desired location on your computer.
+2. Extract the downloaded ZIP file:
+   - Locate the downloaded ZIP file on the client's computer.
+   - Right-click on the file and select "Extract All" or use a file extraction utility of their choice.
+   - Choose a destination folder to extract the contents of the ZIP file.
 
-3. Open a command line interface: open a command line interface or terminal on your computer.
+3. Contact the developer:
+   - Reach out to the developer of the turbosquid Python application to obtain the `creds.py` file.
+   - Send a message or email explaining that you would like to use the application and request the `creds.py` file containing the necessary credentials.
+   - The developer will provide you with the `creds.py` file or guide you on how to generate the required credentials.
 
-4. Check Python installation: You should ensure that Python is installed on your computer and added to the system's path. You can do this by running the following command:
-   ```
-   python --version
-   ```
+4. Place the `creds.py` file in the repository directory:
+   - Once you have the `creds.py` file, copy it to the directory where you extracted the turbosquid repository files.
 
-   If Python is installed correctly, the command will display the installed Python version. If Python is not found or an error is displayed, you should install Python from the official Python website (https://www.python.org) and make sure to select the option to add Python to the system's PATH during the installation process.
-
-5. Change directory: You need to navigate to the directory where they extracted the repository's contents using the `cd` command. For example:
-   ```
-   cd path/to/turbosquid
-   ```
-
-6. Create a virtual environment (optional): It's recommended to create a virtual environment to isolate the dependencies. You can create one by running the following command:
-   ```
-   python -m venv env
-   ```
-
-7. Activate the virtual environment (optional): You should activate the virtual environment by running the appropriate command based on your operating system:
-   - For Windows:
+5. Install the required dependencies:
+   - Open a terminal or command prompt.
+   - Change to the extracted repository directory using the `cd` command. For example:
      ```
-     .\env\Scripts\activate
+     cd path/to/turbosquid
      ```
-   - For Linux/Mac:
+   - Run the following command to install the required dependencies using pip:
      ```
-     source env/bin/activate
+     pip install -r requirements.txt
      ```
 
-8. Install dependencies: Install the required dependencies using the following command:
-   ```
-   pip install -r requirements.txt
-   ```
+6. Run the `async_scraper.py` script:
+   - In the terminal or command prompt, navigate to the turbosquid directory if not already there.
+   - Run the following command to execute the `async_scraper.py` script:
+     ```
+     python async_scraper.py
+     ```
+   - The script will prompt the client to enter the item they want to search for on TurboSquid.
+   - The script will collect the item IDs and store them in a file named `ids/<keyword>_result.csv`.
 
-9. Run the script: You can run the script by executing the `scraper.py` file with Python:
-   ```
-   python scraper.py
-   ```
+7. Open the CSV file:
+   - Locate the `ids/<keyword>_result.csv` file in the turbosquid directory.
+   - Open the CSV file using a spreadsheet program such as Microsoft Excel or Google Sheets.
 
-That's it! The script should now be running and performing the scraping task. Ensure that You has provided the necessary configurations or inputs as required by the script.
+8. Filter the IDs to be downloaded:
+   - Use the filtering capabilities of the spreadsheet program to filter the item IDs based on specific criteria (e.g., certain price range, specific formats, etc.).
+   - Apply the desired filters to the appropriate column(s) in the spreadsheet to narrow down the list of item IDs that need to be downloaded.
+   - Once the filtering is complete, save the modified CSV file.
 
-Note: If You encounters any errors during the installation or execution of the script, make sure you have followed all the steps correctly, Python is installed properly, and your environment is set up correctly.
+9. Run the `downloader.py` script:
+   - In the terminal or command prompt, navigate to the turbosquid directory if not already there.
+   - Run the following command to execute the `downloader.py` script:
+     ```
+     python downloader.py
+     ```
+   - The script will read the item IDs from the modified CSV file.
+   - It will download the 3D model files associated with each item ID and store them in folders named with the item title and product ID under the `results` directory.
+
+10. Wait for the download process to complete:
+   - The script will display the progress of the downloads in the terminal.
+   - Once the download process is finished, the 3D model files will be available in the respective folders under the `results` directory.
