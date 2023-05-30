@@ -46,18 +46,16 @@ class Scraper:
         tree = HTMLParser(response.text)
         return tree.css_first('span#ts-total-pages').text()
 
-
     async def fetch_id(self, client, url):
         retries = 3
         retry_delay = 0.3
         for _ in range(retries):
             try:
-                response = await client.get(url, timeout=None)
+                response = await client.get(url, timeout=10)
                 return response.text
             except:
                 await asyncio.sleep(retry_delay)
         return ''
-
 
     async def fetch_all_id(self, keyword, last_page):
         proxies = {
@@ -88,7 +86,7 @@ class Scraper:
         retry_delay = 0.3
         for _ in range(retries):
             try:
-                response = await client.get(url, timeout=None)
+                response = await client.get(url, timeout=10)
                 return response.json()
             except:
                 await asyncio.sleep(retry_delay)
@@ -105,7 +103,6 @@ class Scraper:
             tasks = [asyncio.create_task(self.fetch_detail(client, url)) for url in urls]
             datas = await asyncio.gather(*tasks, return_exceptions=True)
             return datas
-
 
     def parse_detail(self, responses):
         datas = []
@@ -195,7 +192,7 @@ class Scraper:
         except:
             pass
 
-    def get_cookies(self, url, ):
+    def get_cookies(self, url):
         useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         ff_opt = Options()
         ff_opt.add_argument('-headless')

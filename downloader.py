@@ -2,8 +2,10 @@ import os
 import glob
 import time
 
-import httpx
 from dataclasses import dataclass
+
+from selenium.common import TimeoutException
+
 import creds
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -17,6 +19,7 @@ import pandas as pd
 class Download_link:
 
     base_url:str = 'https://www.turbosquid.com'
+    download_directory: str = os.path.join(os.getcwd(), 'downloads')
 
 
     def webdriver_setup(self):
@@ -24,7 +27,7 @@ class Download_link:
         latitude = 37.7749
         longitude = -122.4194
         ff_opt = Options()
-        ff_opt.add_argument('-headless')
+        # ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sanbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
@@ -34,6 +37,8 @@ class Download_link:
         ff_opt.set_preference('geo.prompt.testing', True)
         ff_opt.set_preference('geo.prompt.testing.allow', True)
         ff_opt.set_preference('geo.wifi.uri', 'data:application/json,{"location": {"lat": ' + str(latitude) + ', "lng": ' + str(longitude) + '}, "accuracy": 100.0}')
+        ff_opt.set_preference("browser.download.folderList", 2)
+        ff_opt.set_preference("browser.download.dir", self.download_directory)
 
         driver = WebDriver(options=ff_opt)
         return driver
@@ -72,35 +77,49 @@ class Download_link:
         driver.close()
 
 
-    def downloadContent(self, filepath, url):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1'
-        }
+    # def downloadContent(self, filepath, url):
+    #
+    #     # Step 1: Get the actual download URL
+    #     with httpx.Client() as client:
+    #         response = client.get(url, follow_redirects=False)
+    #         download_url = response.headers["Location"]
+    #
+    #     # Step 2: Download the file
+    #     with httpx.stream("GET", download_url) as response:
+    #         with open("Sofa_Set_01.fbx", "wb") as file:
+    #             for chunk in response.iter_bytes():
+    #                 file.write(chunk)
+    #
+    #     print("File downloaded successfully.")
 
-        # with httpx.Client(headers=headers, follow_redirects=True) as client:
-        #     response = client.get(url)
-        # with open(filepath, "wb") as f:
-        #     f.write(response.content)
+    # headers = {
+    #     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0',
+    #     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    #     'Accept-Language': 'en-US,en;q=0.5',
+    #     'Accept-Encoding': 'gzip, deflate, br',
+    #     'Connection': 'keep-alive',
+    #     'Upgrade-Insecure-Requests': '1',
+    #     'Sec-Fetch-Dest': 'document',
+    #     'Sec-Fetch-Mode': 'navigate',
+    #     'Sec-Fetch-Site': 'none',
+    #     'Sec-Fetch-User': '?1'
+    # }
 
-        with httpx.stream("GET", url, follow_redirects=True, headers=headers) as response:
-            with open(filepath, "wb") as file:
-                for chunk in response.iter_raw():
-                    file.write(chunk)
+    # with httpx.Client(headers=headers, follow_redirects=True) as client:
+    #     response = client.get(url)
+    # with open(filepath, "wb") as f:
+    #     f.write(response.content)
 
-        # with httpx.Client(headers=headers, follow_redirects=True) as client:
-        #     with open(filepath, "wb") as file:
-        #         response = client.get(url, stream=True)
-        #         for chunk in response.iter_bytes():
-        #             file.write(chunk)
+    # with httpx.stream("GET", url, follow_redirects=True, headers=headers) as response:
+    #     with open(filepath, "wb") as file:
+    #         for chunk in response.iter_raw():
+    #             file.write(chunk)
+
+    # with httpx.Client(headers=headers, follow_redirects=True) as client:
+    #     with open(filepath, "wb") as file:
+    #         response = client.get(url, stream=True)
+    #         for chunk in response.iter_bytes():
+    #             file.write(chunk)
 
 
     def toDownloadPage(self, id, cookies):
@@ -114,18 +133,20 @@ class Download_link:
 
         # detail page
         wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.row_lab > div.shortContainer > div.purchaseSection > div.btn-container > a#FPAddToCart > button'))).click()
-
-        # download page
         while 1:
             try:
                 wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
-                break
-            except:
+            except TimeoutException:
+                # download page
+                wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
+                driver.refresh()
                 items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
                 print('Downloading...')
-                for i, item in enumerate(items,start=1):
+                for i in range(1, len(items) + 1):
+                    driver.refresh()
+                    item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
                     if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
-                        folderpath = os.path.join(os.getcwd(), fr"result\{item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}")
+                        folderpath = os.path.join(os.getcwd(), fr"downloads\{item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}")
                         os.makedirs(folderpath, exist_ok=True)
                     else:
                         try:
@@ -133,17 +154,17 @@ class Download_link:
                         except:
                             pass
                         subitems = item.find_elements(By.CSS_SELECTOR, 'a')
-                        for subitem in subitems:
+                        for j in range(1, len(subitems)+1):
+                            subitem = item.find_element(By.CSS_SELECTOR, f'a:nth-of-type({str(j)})')
                             filepath = fr'{folderpath}\{subitem.text}'
-                            url = subitem.get_attribute('href')
-                            self.downloadContent(filepath=filepath, url=url)
-                    driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
-                    driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
-                    wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
-
+                            subitem.click()
+                            # url = subitem.get_attribute('href')
+                            # self.downloadContent(filepath=filepath, url=url)
+                driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
+                driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
+                wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
 
         driver.close()
-
 
     def get_free_ids(self):
         folder_path = os.path.join(os.getcwd(), 'ids')
@@ -164,6 +185,7 @@ class Download_link:
         cookies = self.getCookies()
         print("Reading ids...")
         free_ids = self.get_free_ids()
+        os.makedirs(self.download_directory, exist_ok=True)
         for i, id in enumerate(free_ids, start=1):
             retries = 3
             retry_delay = 1
@@ -177,14 +199,14 @@ class Download_link:
                         print(f"Retrying due to {e}...")
                         time.sleep(retry_delay)
                 else:
-                    try:
-                        print(f"Adding item {id}...({i} of {len(free_ids)})")
-                        self.toDownloadPage(id, cookies=cookies)
-                        print("Download Completed")
-                        break
-                    except Exception as e:
-                        print(f"Retrying due to {e}...")
-                        time.sleep(retry_delay)
+                    # try:
+                    print(f"Adding item {id}...({i} of {len(free_ids)})")
+                    self.toDownloadPage(id, cookies=cookies)
+                    print("Download Completed")
+                        # break
+                    # except Exception as e:
+                        # print(f"Retrying due to {e}...")
+                        # time.sleep(retry_delay)
 
 if __name__ == '__main__':
     d = Download_link()
