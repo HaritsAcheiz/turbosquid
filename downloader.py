@@ -4,7 +4,7 @@ import time
 
 from dataclasses import dataclass
 
-from selenium.common import TimeoutException
+from selenium.common import TimeoutException, StaleElementReferenceException
 
 import creds
 from selenium.webdriver import Keys
@@ -23,9 +23,10 @@ class Download_link:
 
 
     def webdriver_setup(self):
-        useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
-        latitude = 37.7749
-        longitude = -122.4194
+        # useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        useragent = 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/113.0'
+        latitude = 37.7800
+        longitude = -122.4200
         ff_opt = Options()
         # ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sanbox')
@@ -38,7 +39,9 @@ class Download_link:
         ff_opt.set_preference('geo.prompt.testing.allow', True)
         ff_opt.set_preference('geo.wifi.uri', 'data:application/json,{"location": {"lat": ' + str(latitude) + ', "lng": ' + str(longitude) + '}, "accuracy": 100.0}')
         ff_opt.set_preference("browser.download.folderList", 2)
+        ff_opt.set_preference("browser.download.manager.showWhenStarting", False)
         ff_opt.set_preference("browser.download.dir", self.download_directory)
+        ff_opt.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream")
 
         driver = WebDriver(options=ff_opt)
         return driver
@@ -46,7 +49,8 @@ class Download_link:
 
     def getCookies(self):
         driver = self.webdriver_setup()
-        driver.fullscreen_window()
+        # driver.fullscreen_window()
+        driver.maximize_window()
         driver.get(self.base_url)
         wait = WebDriverWait(driver, 20)
 
@@ -136,28 +140,48 @@ class Download_link:
         while 1:
             try:
                 wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
+                break
             except TimeoutException:
                 # download page
-                wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
-                driver.refresh()
                 items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
                 print('Downloading...')
+                count_of_files = 0
                 for i in range(1, len(items) + 1):
-                    driver.refresh()
-                    item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
+                    subitems=[]
+                    while 1:
+                        try:
+                            item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
+                            item.get_attribute('class')
+                            break
+                        except StaleElementReferenceException:
+                            driver.refresh()
                     if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
                         folderpath = os.path.join(os.getcwd(), fr"downloads\{item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}")
-                        os.makedirs(folderpath, exist_ok=True)
+                        # os.makedirs(folderpath, exist_ok=True)
                     else:
                         try:
-                            item.find_element(By.CSS_SELECTOR, 'div.RowAction.ActionShowAll').click()
+                            WebDriverWait(item, 20).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.RowAction.ActionShowAll'))).click()
                         except:
                             pass
-                        subitems = item.find_elements(By.CSS_SELECTOR, 'a')
-                        for j in range(1, len(subitems)+1):
-                            subitem = item.find_element(By.CSS_SELECTOR, f'a:nth-of-type({str(j)})')
-                            filepath = fr'{folderpath}\{subitem.text}'
+                        subitems = WebDriverWait(item,20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'a')))
+                        # for j in range(1, len(subitems)+1):
+                        #     subitem = item.find_element(By.CSS_SELECTOR, f'a:nth-of-type({str(j)})')
+                        #     filepath = fr'{folderpath}\{subitem.text}'
+                        #     subitem.click()
+                        for subitem in subitems:
+                            print(subitem.text)
+                            print(subitem.get_attribute('outerHTML'))
                             subitem.click()
+                            # filepath = fr'{folderpath}\{subitem.text}'
+                            count_of_files += 1
+                    while 1:
+                        time.sleep(3)
+                        print("waiting")
+                        # Check if the download directory has any new files
+                        files = os.listdir(self.download_directory)
+                        if (count_of_files == len(files)):
+                            # File download is completed
+                            break
                             # url = subitem.get_attribute('href')
                             # self.downloadContent(filepath=filepath, url=url)
                 driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
@@ -178,7 +202,6 @@ class Download_link:
         combined_df = pd.concat(data_list)
 
         return list(combined_df['product_id'])
-
 
     def main(self):
         print("Getting cookies...")
@@ -203,7 +226,7 @@ class Download_link:
                     print(f"Adding item {id}...({i} of {len(free_ids)})")
                     self.toDownloadPage(id, cookies=cookies)
                     print("Download Completed")
-                        # break
+                    break
                     # except Exception as e:
                         # print(f"Retrying due to {e}...")
                         # time.sleep(retry_delay)
