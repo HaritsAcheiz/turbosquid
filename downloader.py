@@ -1,6 +1,7 @@
 import os
 import glob
 import time
+import shutil
 
 from dataclasses import dataclass
 
@@ -116,8 +117,10 @@ class Download_link:
                         except StaleElementReferenceException:
                             driver.refresh()
                     if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
-                        folderpath = os.path.join(os.getcwd(), fr"downloads\{item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}")
-                        # os.makedirs(folderpath, exist_ok=True)
+                        folder_name = {item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}
+                        folderpath = os.path.join(os.getcwd(), fr"downloads\{folder_name}")
+                        print(f'Downloading {folder_name}...')
+                        os.makedirs(folderpath, exist_ok=True)
                     else:
                         try:
                             WebDriverWait(item, 20).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.RowAction.ActionShowAll'))).click()
@@ -135,24 +138,30 @@ class Download_link:
                             time.sleep(5)
                             count_of_files += 1
 
-                        print("Waiting for downloads to complete...")
+                        print(f"Downloading {str(count_of_files)} items...")
                         while True:
+                            tracker = []
                             time.sleep(1)
-                            files = os.listdir(self.download_directory)
-                            if len(files) >= count_of_files:
+                            files = [item.lower() for item in os.listdir(self.download_directory)]
+                            if len(files) == count_of_files:
                                 all_downloads_completed = True
                                 for subitem in subitems:
                                     if subitem.text.lower().replace(' ', '_') not in files:
                                         all_downloads_completed = False
                                         break
+                                    else:
+                                        tracker.append(subitem.text.lower().replace(' ', '_'))
+                                for i, item in enumerate(tracker):
+                                    print(f'{item} download completed ({len(tracker)} of {str(count_of_files)})')
                                 if all_downloads_completed:
                                     break
-                        print("Downloads completed!")
+                        print(f"Download {folder_name} completed!")
 
                 driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
                 driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
                 wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
         time.sleep(3)
+        print('All downloads completed!')
         driver.close()
 
     def get_free_ids(self):
@@ -184,7 +193,7 @@ class Download_link:
                         self.exportItem(id, cookies=cookies)
                         break
                     except Exception as e:
-                        print(f"Retrying due to {e}...")
+                        print(f"Retrying due to error {e}")
                         time.sleep(retry_delay)
                 else:
                     try:
@@ -193,7 +202,7 @@ class Download_link:
                         print("Download Completed")
                         break
                     except Exception as e:
-                        print(f"Retrying due to {e}...")
+                        print(f"Retrying due to error {e}")
                         time.sleep(retry_delay)
 
 if __name__ == '__main__':
