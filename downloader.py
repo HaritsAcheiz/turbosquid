@@ -20,24 +20,29 @@ class Download_link:
 
     base_url:str = 'https://www.turbosquid.com'
     download_directory: str = os.path.join(os.getcwd(), 'downloads')
-
+    latitude: float = -6.2088
+    longitude: float = 106.8456
 
     def webdriver_setup(self):
-        # useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
-        useragent = 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/113.0'
-        latitude = 37.7800
-        longitude = -122.4200
+        useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        # useragent = 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/113.0'
+
         ff_opt = Options()
-        # ff_opt.add_argument('-headless')
-        ff_opt.add_argument('--no-sanbox')
+        ff_opt.add_argument('-headless')
+        ff_opt.add_argument('--no-sandbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
 
-        ff_opt.set_preference('geo.enabled', True)
-        ff_opt.set_preference('geo.provider.use_corelocation', False)
-        ff_opt.set_preference('geo.prompt.testing', True)
-        ff_opt.set_preference('geo.prompt.testing.allow', True)
-        ff_opt.set_preference('geo.wifi.uri', 'data:application/json,{"location": {"lat": ' + str(latitude) + ', "lng": ' + str(longitude) + '}, "accuracy": 100.0}')
+        # geolocation
+        # latitude = 37.7749
+        # longitude = -122.4194
+        # ff_opt.set_preference('geo.enabled', True)
+        # ff_opt.set_preference('geo.provider.use_corelocation', False)
+        # ff_opt.set_preference('geo.prompt.testing', True)
+        # ff_opt.set_preference('geo.prompt.testing.allow', True)
+        # ff_opt.set_preference('geo.wifi.uri', 'data:application/json,{"location": {"lat": ' + str(latitude) + ', "lng": ' + str(longitude) + '}, "accuracy": 100.0}')
+
+        # download folder
         ff_opt.set_preference("browser.download.folderList", 2)
         ff_opt.set_preference("browser.download.manager.showWhenStarting", False)
         ff_opt.set_preference("browser.download.dir", self.download_directory)
@@ -46,13 +51,13 @@ class Download_link:
         driver = WebDriver(options=ff_opt)
         return driver
 
-
     def getCookies(self):
         driver = self.webdriver_setup()
+        driver.execute_script(f"navigator.geolocation.getCurrentPosition = function(success) {{ success({{ coords: {{ latitude: {self.latitude}, longitude: {self.longitude} }} }}); }};")
         # driver.fullscreen_window()
         driver.maximize_window()
         driver.get(self.base_url)
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 15)
 
         # login
         wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'a.navbar-menu.anonymous'))).click()
@@ -65,14 +70,13 @@ class Download_link:
         driver.close()
         return cookies
 
-
     def exportItem(self, id, cookies):
         driver = self.webdriver_setup()
         driver.fullscreen_window()
         driver.get(self.base_url)
         for cookie in cookies:
             driver.add_cookie(cookie_dict=cookie)
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 15)
         driver.get(f'https://www.turbosquid.com/FullPreview/{id}')
 
         # detail page
@@ -80,74 +84,30 @@ class Download_link:
 
         driver.close()
 
-
-    # def downloadContent(self, filepath, url):
-    #
-    #     # Step 1: Get the actual download URL
-    #     with httpx.Client() as client:
-    #         response = client.get(url, follow_redirects=False)
-    #         download_url = response.headers["Location"]
-    #
-    #     # Step 2: Download the file
-    #     with httpx.stream("GET", download_url) as response:
-    #         with open("Sofa_Set_01.fbx", "wb") as file:
-    #             for chunk in response.iter_bytes():
-    #                 file.write(chunk)
-    #
-    #     print("File downloaded successfully.")
-
-    # headers = {
-    #     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0',
-    #     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    #     'Accept-Language': 'en-US,en;q=0.5',
-    #     'Accept-Encoding': 'gzip, deflate, br',
-    #     'Connection': 'keep-alive',
-    #     'Upgrade-Insecure-Requests': '1',
-    #     'Sec-Fetch-Dest': 'document',
-    #     'Sec-Fetch-Mode': 'navigate',
-    #     'Sec-Fetch-Site': 'none',
-    #     'Sec-Fetch-User': '?1'
-    # }
-
-    # with httpx.Client(headers=headers, follow_redirects=True) as client:
-    #     response = client.get(url)
-    # with open(filepath, "wb") as f:
-    #     f.write(response.content)
-
-    # with httpx.stream("GET", url, follow_redirects=True, headers=headers) as response:
-    #     with open(filepath, "wb") as file:
-    #         for chunk in response.iter_raw():
-    #             file.write(chunk)
-
-    # with httpx.Client(headers=headers, follow_redirects=True) as client:
-    #     with open(filepath, "wb") as file:
-    #         response = client.get(url, stream=True)
-    #         for chunk in response.iter_bytes():
-    #             file.write(chunk)
-
-
     def toDownloadPage(self, id, cookies):
         driver = self.webdriver_setup()
+        driver.execute_script(f"navigator.geolocation.getCurrentPosition = function(success) {{ success({{ coords: {{ latitude: {self.latitude}, longitude: {self.longitude} }} }}); }};")
         driver.fullscreen_window()
         driver.get(self.base_url)
         for cookie in cookies:
             driver.add_cookie(cookie_dict=cookie)
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 15)
         driver.get(f'https://www.turbosquid.com/FullPreview/{id}')
 
         # detail page
         wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.row_lab > div.shortContainer > div.purchaseSection > div.btn-container > a#FPAddToCart > button'))).click()
         while 1:
             try:
-                wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
+                WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
                 break
             except TimeoutException:
+
                 # download page
+                driver.refresh()
                 items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
                 print('Downloading...')
                 count_of_files = 0
                 for i in range(1, len(items) + 1):
-                    subitems=[]
                     while 1:
                         try:
                             item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
@@ -163,31 +123,36 @@ class Download_link:
                             WebDriverWait(item, 20).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.RowAction.ActionShowAll'))).click()
                         except:
                             pass
-                        subitems = WebDriverWait(item,20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'a')))
+                        subitems = WebDriverWait(item, 20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'a')))
+
                         # for j in range(1, len(subitems)+1):
                         #     subitem = item.find_element(By.CSS_SELECTOR, f'a:nth-of-type({str(j)})')
                         #     filepath = fr'{folderpath}\{subitem.text}'
                         #     subitem.click()
+
                         for subitem in subitems:
-                            print(subitem.text)
-                            print(subitem.get_attribute('outerHTML'))
                             subitem.click()
-                            # filepath = fr'{folderpath}\{subitem.text}'
+                            time.sleep(5)
                             count_of_files += 1
-                    while 1:
-                        time.sleep(3)
-                        print("waiting")
-                        # Check if the download directory has any new files
-                        files = os.listdir(self.download_directory)
-                        if (count_of_files == len(files)):
-                            # File download is completed
-                            break
-                            # url = subitem.get_attribute('href')
-                            # self.downloadContent(filepath=filepath, url=url)
+
+                        print("Waiting for downloads to complete...")
+                        while True:
+                            time.sleep(1)
+                            files = os.listdir(self.download_directory)
+                            if len(files) >= count_of_files:
+                                all_downloads_completed = True
+                                for subitem in subitems:
+                                    if subitem.text.lower().replace(' ', '_') not in files:
+                                        all_downloads_completed = False
+                                        break
+                                if all_downloads_completed:
+                                    break
+                        print("Downloads completed!")
+
                 driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
                 driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
                 wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
-
+        time.sleep(3)
         driver.close()
 
     def get_free_ids(self):
@@ -222,14 +187,14 @@ class Download_link:
                         print(f"Retrying due to {e}...")
                         time.sleep(retry_delay)
                 else:
-                    # try:
-                    print(f"Adding item {id}...({i} of {len(free_ids)})")
-                    self.toDownloadPage(id, cookies=cookies)
-                    print("Download Completed")
-                    break
-                    # except Exception as e:
-                        # print(f"Retrying due to {e}...")
-                        # time.sleep(retry_delay)
+                    try:
+                        print(f"Adding item {id}...({i} of {len(free_ids)})")
+                        self.toDownloadPage(id, cookies=cookies)
+                        print("Download Completed")
+                        break
+                    except Exception as e:
+                        print(f"Retrying due to {e}...")
+                        time.sleep(retry_delay)
 
 if __name__ == '__main__':
     d = Download_link()
