@@ -20,7 +20,7 @@ import pandas as pd
 class Download_link:
 
     base_url:str = 'https://www.turbosquid.com'
-    download_directory: str = os.path.join(os.getcwd(), 'downloads')
+    download_directory: str = os.path.join(os.getcwd(), 'temp')
     latitude: float = -6.2088
     longitude: float = 106.8456
 
@@ -85,6 +85,19 @@ class Download_link:
 
         driver.close()
 
+    def moveFiles(self, source_folder, destination_folder):
+        # List all files in the source folder
+        files = os.listdir(source_folder)
+
+        # Move each file from the source folder to the destination folder
+        for file in files:
+            # Construct the source and destination file paths
+            source_file = os.path.join(source_folder, file)
+            destination_file = os.path.join(destination_folder, file)
+
+            # Move the file to the destination folder
+            shutil.move(source_file, destination_file)
+
     def toDownloadPage(self, id, cookies):
         driver = self.webdriver_setup()
         driver.execute_script(f"navigator.geolocation.getCurrentPosition = function(success) {{ success({{ coords: {{ latitude: {self.latitude}, longitude: {self.longitude} }} }}); }};")
@@ -105,9 +118,7 @@ class Download_link:
 
                 # download page
                 driver.refresh()
-                items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
-                print('Downloading...')
-                count_of_files = 0
+                items = WebDriverWait(driver, 30).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
                 for i in range(1, len(items) + 1):
                     while 1:
                         try:
@@ -117,7 +128,7 @@ class Download_link:
                         except StaleElementReferenceException:
                             driver.refresh()
                     if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
-                        folder_name = {item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]}
+                        folder_name = item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]
                         folderpath = os.path.join(os.getcwd(), fr"downloads\{folder_name}")
                         print(f'Downloading {folder_name}...')
                         os.makedirs(folderpath, exist_ok=True)
@@ -133,10 +144,10 @@ class Download_link:
                         #     filepath = fr'{folderpath}\{subitem.text}'
                         #     subitem.click()
 
+                        count_of_files = len(subitems)
                         for subitem in subitems:
                             subitem.click()
                             time.sleep(5)
-                            count_of_files += 1
 
                         print(f"Downloading {str(count_of_files)} items...")
                         while True:
@@ -156,7 +167,7 @@ class Download_link:
                                 if all_downloads_completed:
                                     break
                         print(f"Download {folder_name} completed!")
-
+                    self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
                 driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
                 driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
                 wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
@@ -199,7 +210,6 @@ class Download_link:
                     try:
                         print(f"Adding item {id}...({i} of {len(free_ids)})")
                         self.toDownloadPage(id, cookies=cookies)
-                        print("Download Completed")
                         break
                     except Exception as e:
                         print(f"Retrying due to error {e}")
