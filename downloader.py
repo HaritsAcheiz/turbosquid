@@ -86,6 +86,7 @@ class Download_link:
         driver.close()
 
     def moveFiles(self, source_folder, destination_folder):
+        print(f'Organizing files of {destination_folder}')
         # List all files in the source folder
         files = os.listdir(source_folder)
 
@@ -97,6 +98,22 @@ class Download_link:
 
             # Move the file to the destination folder
             shutil.move(source_file, destination_file)
+        print('Completed !')
+        return destination_folder.split('-')[-1]
+
+    def checklist(self, id):
+        folder_path = os.path.join(os.getcwd(), 'ids')
+        file_pattern = '*.csv'
+        file_paths = glob.glob(os.path.join(folder_path, file_pattern))
+
+        data_list = []
+        for file_path in file_paths:
+            df = pd.read_csv(file_path)
+            data_list.append(df)
+        combined_df = pd.concat(data_list)
+
+        combined_df.loc[combined_df['product_id'] == id, 'checklist'] = True
+        combined_df.to_csv(file_paths[0])
 
     def toDownloadPage(self, id, cookies):
         driver = self.webdriver_setup()
@@ -167,7 +184,8 @@ class Download_link:
                                 if all_downloads_completed:
                                     break
                         print(f"Download {folder_name} completed!")
-                    self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
+                        checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
+                        self.checklist(checklist_id)
                 driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
                 driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
                 wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
@@ -186,7 +204,7 @@ class Download_link:
             data_list.append(df)
         combined_df = pd.concat(data_list)
 
-        return list(combined_df['product_id'])
+        return list(combined_df[combined_df['checklist'] is False]['product_id'])
 
     def main(self):
         print("Getting cookies...")

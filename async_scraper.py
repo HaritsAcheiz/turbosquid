@@ -8,7 +8,7 @@ import re
 import csv
 import os
 import creds
-from selenium.webdriver import Keys
+from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.firefox.options import Options
@@ -31,9 +31,14 @@ class Item:
     materials: str
     unwrapped_uvs: str
     uv_mapped: str
+    checklist: bool
 
 @dataclass
 class Scraper:
+    base_url: str = 'https://www.turbosquid.com'
+    download_directory: str = os.path.join(os.getcwd(), 'temp')
+    latitude: float = -6.2088
+    longitude: float = 106.8456
 
     def get_page(self, keyword):
         proxies = {
@@ -41,6 +46,17 @@ class Scraper:
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
         url = f'https://www.turbosquid.com/Search/3D-Models/free/{keyword}?page_size=500'
+        with httpx.Client() as client:
+            response = client.get(url)
+        tree = HTMLParser(response.text)
+        return tree.css_first('span#ts-total-pages').text()
+
+    def get_page_cat(self, url):
+        proxies = {
+            'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
+            'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
+        }
+        url = f'{url}?page_size=500'
         with httpx.Client() as client:
             response = client.get(url)
         tree = HTMLParser(response.text)
@@ -70,6 +86,18 @@ class Scraper:
             responses = await asyncio.gather(*tasks, return_exceptions=True)
             return responses
 
+    async def fetch_all_id_cat(self, url, last_page):
+        proxies = {
+            'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
+            'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
+        }
+
+        urls = [f'{url}?page_num={page_num}&page_size=500' for page_num in range(1, int(last_page)+1)]
+
+        async with httpx.AsyncClient(proxies=proxies) as client:
+            tasks = [asyncio.create_task(self.fetch_id(client,url)) for url in urls]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            return responses
 
     def parse_id(self, responses):
         staging_loc = 'div#SearchResultAssets > div.search-lab.AssetTile-md.tile-large'
@@ -91,6 +119,8 @@ class Scraper:
             except:
                 await asyncio.sleep(retry_delay)
         return ''
+        # response = await client.get(url, timeout=20)
+        # return response.json()
 
     async def fetch_all_detail(self, ids):
         proxies = {
@@ -98,8 +128,12 @@ class Scraper:
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
 
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        }
+
         urls = [f'https://www.turbosquid.com/API/v1/Search/Preview/{id}' for id in ids if id.isnumeric()]
-        async with httpx.AsyncClient(proxies=proxies) as client:
+        async with httpx.AsyncClient(headers=headers, proxies=proxies) as client:
             tasks = [asyncio.create_task(self.fetch_detail(client, url)) for url in urls]
             datas = await asyncio.gather(*tasks, return_exceptions=True)
             return datas
@@ -163,14 +197,15 @@ class Scraper:
                                 textures=textures,
                                 materials=materials,
                                 unwrapped_uvs=unwrapped_uvs,
-                                uv_mapped=uv_mapped))
+                                uv_mapped=uv_mapped,
+                                checklist=False))
             datas.append(data)
         return datas
 
 
     def to_csv(self, datas, filename):
         headers = ['model_name', 'product_id', 'page_link', 'price', 'model_license',
-                   'format', 'polygons', 'vertices', 'textures', 'materials', 'unwrapped_uvs', 'uv_mapped']
+                   'format', 'polygons', 'vertices', 'textures', 'materials', 'unwrapped_uvs', 'uv_mapped', 'checklist']
         try:
             for data in datas:
                 try:
@@ -192,42 +227,85 @@ class Scraper:
         except:
             pass
 
-    def get_cookies(self, url):
-        useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
-        ff_opt = Options()
-        ff_opt.add_argument('-headless')
-        ff_opt.add_argument('--no-sanbox')
-        ff_opt.set_preference("general.useragent.override", useragent)
-        ff_opt.page_load_strategy = 'eager'
-        driver = WebDriver(options=ff_opt)
-        driver.get(url)
-        WebDriverWait(driver, 10).until(
-            ec.element_to_be_clickable((By.CSS_SELECTOR, 'a.navbar-menu.anonymous'))).click()
-        WebDriverWait(driver, 10).until(
-            ec.presence_of_element_located((By.CSS_SELECTOR, 'input#authentication_method_email'))).send_keys(
-            creds.username + Keys.RETURN)
-        element = WebDriverWait(driver, 10).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'input#user_password')))
-        element.click()
-        element.send_keys(creds.pw + Keys.RETURN)
-
-        driver.close()
+    def get_top_category(self):
+        url = 'https://www.turbosquid.com/Search/3D-Models'
+        with httpx.Client() as client:
+            response = client.get(url)
+        tree = HTMLParser(response.text)
+        categories = []
+        children = tree.css('a.related-search-item')
+        for child in children:
+            key = child.attributes['href'].strip().split('/')[-1]
+            url = child.attributes['href']
+            dict_cat = {key: url}
+            categories.append(dict_cat)
+        return categories
 
     async def main(self):
-        keyword = input('What do you want to search? ')
-        print('Getting Product IDs...')
-        last_page = self.get_page(keyword)
-        page_responses = []
-        page_responses.extend(await self.fetch_all_id(keyword, last_page))
-        ids = s.parse_id(page_responses)
-        print('Getting Details...')
-        responses = []
-        responses.extend(await self.fetch_all_detail(ids))
-        datas = s.parse_detail(responses)
-        datas = [data for data in datas if data['price'] == 'Free']
-        print(f'Saving data to {keyword}_result.csv')
-        s.to_csv(datas, f'{keyword}_result.csv')
-        print('Scraping data is done!')
-        return responses
+        print('*****************Turbosquid Scraper*******************')
+        print('Scraper Method:')
+        print('(1) By Keyword')
+        print('(2) By Top Category')
+        while 1:
+            try:
+                method = int(input('Please type search method number: '))
+                if method >= 1 and method <= 2:
+                    break
+                else:
+                    print("Input out of range")
+                    continue
+            except:
+                print("Invalid input try again")
+                continue
+
+        if method == 1:
+            keyword = input('What do you want to search? ')
+            print('Getting Product IDs...')
+            last_page = self.get_page(keyword)
+            page_responses = []
+            page_responses.extend(await self.fetch_all_id(keyword, last_page))
+            ids = s.parse_id(page_responses)
+            print('Getting Details...')
+            responses = []
+            responses.extend(await self.fetch_all_detail(ids))
+            datas = s.parse_detail(responses)
+            datas = [data for data in datas if data['price'] == 'Free']
+            print(f'Saving data to {keyword}_result.csv')
+            s.to_csv(datas, f'{keyword}_result.csv')
+            print('Scraping data is done!')
+            return responses
+
+        elif method == 2:
+            categories = self.get_top_category()
+            for i, category in enumerate(categories):
+                print(f'({str(i)}) {category["key"]}')
+            while 1:
+                try:
+                    choosen_cat = int(input('Please type category number: '))
+                    if choosen_cat >= 0 and choosen_cat <= len(categories):
+                        break
+                    else:
+                        print("Input out of range")
+                        continue
+                except:
+                    print("Invalid input try again")
+                    continue
+
+            category = categories[choosen_cat]
+            print('Getting Product IDs...')
+            last_page = self.get_page_cat(category['url'])
+            page_responses = []
+            page_responses.extend(await self.fetch_all_id_cat(category['url'], last_page))
+            ids = s.parse_id(page_responses)
+            print('Getting Details...')
+            responses = []
+            responses.extend(await self.fetch_all_detail(ids))
+            datas = s.parse_detail(responses)
+            datas = [data for data in datas if data['price'] == 'Free']
+            print(f'Saving data to {category["key"]}_result.csv')
+            s.to_csv(datas, f'{category["key"]}_result.csv')
+            print('Scraping data is done!')
+            return responses
 
 if __name__ == '__main__':
     s=Scraper()
