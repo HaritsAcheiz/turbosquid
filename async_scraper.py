@@ -1,5 +1,3 @@
-import time
-
 import httpx
 from selectolax.parser import HTMLParser
 import asyncio
@@ -8,12 +6,6 @@ import re
 import csv
 import os
 import creds
-from selenium.webdriver import Keys, ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.webdriver import WebDriver
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
 
 @dataclass
 class Item:
@@ -50,6 +42,24 @@ class Scraper:
             response = client.get(url)
         tree = HTMLParser(response.text)
         return tree.css_first('span#ts-total-pages').text()
+
+    def get_top_category(self):
+        url = 'https://www.turbosquid.com/Search/3D-Models'
+        with httpx.Client() as client:
+            response = client.get(url)
+        tree = HTMLParser(response.text)
+        categories = []
+        children = tree.css('a.related-search-item')
+        for child in children:
+            temp = child.attributes['href'].strip().rsplit('/', maxsplit=1)
+            key = temp[-1]
+            if child.parent.attributes['class'] == 'col-md-2 col-sm-4':
+                url = temp[0]+'/free/'+key+'page_size=500'
+            else:
+                url = temp[0]+'/Search/3D-Models/free/'+key+'?page_size=500'
+            dict_cat = {key: url}
+            categories.append(dict_cat)
+        return categories
 
     def get_page_cat(self, url):
         proxies = {
@@ -227,20 +237,6 @@ class Scraper:
         except:
             pass
 
-    def get_top_category(self):
-        url = 'https://www.turbosquid.com/Search/3D-Models'
-        with httpx.Client() as client:
-            response = client.get(url)
-        tree = HTMLParser(response.text)
-        categories = []
-        children = tree.css('a.related-search-item')
-        for child in children:
-            key = child.attributes['href'].strip().split('/')[-1]
-            url = child.attributes['href']
-            dict_cat = {key: url}
-            categories.append(dict_cat)
-        return categories
-
     async def main(self):
         print('*****************Turbosquid Scraper*******************')
         print('Scraper Method:')
@@ -259,7 +255,7 @@ class Scraper:
                 continue
 
         if method == 1:
-            keyword = input('What do you want to search? ')
+            keyword = input('What do you want to search? ').replace(' ','-')
             print('Getting Product IDs...')
             last_page = self.get_page(keyword)
             page_responses = []
@@ -270,15 +266,15 @@ class Scraper:
             responses.extend(await self.fetch_all_detail(ids))
             datas = s.parse_detail(responses)
             datas = [data for data in datas if data['price'] == 'Free']
-            print(f'Saving data to {keyword}_result.csv')
-            s.to_csv(datas, f'{keyword}_result.csv')
+            print(f'Saving data to {keyword.replace("-","_")}_result.csv')
+            s.to_csv(datas, f'{keyword.replace("-","_")}_result.csv')
             print('Scraping data is done!')
             return responses
 
         elif method == 2:
             categories = self.get_top_category()
             for i, category in enumerate(categories):
-                print(f'({str(i)}) {category["key"]}')
+                print(f'({i}) {list(category)[0]}')
             while 1:
                 try:
                     choosen_cat = int(input('Please type category number: '))
