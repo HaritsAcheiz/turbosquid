@@ -298,8 +298,8 @@ class Scraper:
             responses.extend(await self.fetch_all_detail(ids))
             datas = s.parse_detail(responses)
             datas = [data for data in datas if data['price'] == 'Free']
-            print(f'Saving data to {category["key"]}_result.csv')
-            s.to_csv(datas, f'{category["key"]}_result.csv')
+            print(f'Saving data to {category["opt"]}_result.csv')
+            s.to_csv(datas, f'{category["opt"]}_result.csv')
             print('Scraping data is done!')
             return responses
 
