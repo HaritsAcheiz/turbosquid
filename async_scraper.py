@@ -49,16 +49,16 @@ class Scraper:
             response = client.get(url)
         tree = HTMLParser(response.text)
         categories = []
+        dict_cat = {'opt': None, 'url': None}
         children = tree.css('a.related-search-item')
         for child in children:
             temp = child.attributes['href'].strip().rsplit('/', maxsplit=1)
-            key = temp[-1]
+            dict_cat['opt'] = temp[-1]
             if child.parent.attributes['class'] == 'col-md-2 col-sm-4':
-                url = temp[0]+'/free/'+key+'page_size=500'
+                dict_cat['url'] = temp[0]+'/free/'+dict_cat['opt']+'page_size=500'
             else:
-                url = temp[0]+'/Search/3D-Models/free/'+key+'?page_size=500'
-            dict_cat = {key: url}
-            categories.append(dict_cat)
+                dict_cat['url'] = temp[0]+'/Search/3D-Models/free/'+dict_cat['opt']+'?page_size=500'
+            categories.append(dict_cat.copy())
         return categories
 
     def get_page_cat(self, url):
@@ -274,7 +274,7 @@ class Scraper:
         elif method == 2:
             categories = self.get_top_category()
             for i, category in enumerate(categories):
-                print(f'({i}) {list(category)[0]}')
+                print(f'({i}) {category["opt"]}')
             while 1:
                 try:
                     choosen_cat = int(input('Please type category number: '))
