@@ -105,15 +105,14 @@ class Download_link:
         folder_path = os.path.join(os.getcwd(), 'ids')
         file_pattern = '*.csv'
         file_paths = glob.glob(os.path.join(folder_path, file_pattern))
-
         data_list = []
         for file_path in file_paths:
             df = pd.read_csv(file_path)
             data_list.append(df)
-        combined_df = pd.concat(data_list)
-
+        combined_df = pd.concat(data_list, ignore_index=True)
         combined_df.loc[combined_df['product_id'] == id, 'checklist'] = True
-        combined_df.to_csv(file_paths[0])
+        combined_df.to_csv(file_paths[0], index=False)
+        print(f'item {id} checked!')
 
     def toDownloadPage(self, id, cookies):
         driver = self.webdriver_setup()
@@ -129,13 +128,13 @@ class Download_link:
         wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.row_lab > div.shortContainer > div.purchaseSection > div.btn-container > a#FPAddToCart > button'))).click()
         while 1:
             try:
-                WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
+                WebDriverWait(driver, 20).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
                 break
             except TimeoutException:
 
                 # download page
                 driver.refresh()
-                items = WebDriverWait(driver, 30).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
+                items = WebDriverWait(driver, 20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
                 for i in range(1, len(items) + 1):
                     while 1:
                         try:
@@ -185,7 +184,7 @@ class Download_link:
                                     break
                         print(f"Download {folder_name} completed!")
                         checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
-                        self.checklist(checklist_id)
+                        self.checklist(int(checklist_id))
                 driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
                 driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
                 wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
@@ -204,7 +203,7 @@ class Download_link:
             data_list.append(df)
         combined_df = pd.concat(data_list)
 
-        return list(combined_df[combined_df['checklist'] is False]['product_id'])
+        return list(combined_df[combined_df['checklist'] == False]['product_id'])
 
     def main(self):
         print("Getting cookies...")
@@ -225,13 +224,13 @@ class Download_link:
                         print(f"Retrying due to error {e}")
                         time.sleep(retry_delay)
                 else:
-                    try:
-                        print(f"Adding item {id}...({i} of {len(free_ids)})")
-                        self.toDownloadPage(id, cookies=cookies)
-                        break
-                    except Exception as e:
-                        print(f"Retrying due to error {e}")
-                        time.sleep(retry_delay)
+                    # try:
+                    print(f"Adding item {id}...({i} of {len(free_ids)})")
+                    self.toDownloadPage(id, cookies=cookies)
+                    break
+                    # except Exception as e:
+                    #     print(f"Retrying due to error {e}")
+                    #     time.sleep(retry_delay)
 
 if __name__ == '__main__':
     d = Download_link()
