@@ -55,7 +55,7 @@ class Scraper:
             temp = child.attributes['href'].strip().rsplit('/', maxsplit=1)
             dict_cat['opt'] = temp[-1]
             if child.parent.attributes['class'] == 'col-md-2 col-sm-4':
-                dict_cat['url'] = temp[0]+'/free/'+dict_cat['opt']+'page_size=500'
+                dict_cat['url'] = temp[0]+'/free/'+dict_cat['opt']+'?page_size=500'
             else:
                 dict_cat['url'] = temp[0]+'/Search/3D-Models/free/'+dict_cat['opt']+'?page_size=500'
             categories.append(dict_cat.copy())
@@ -289,10 +289,12 @@ class Scraper:
 
             category = categories[choosen_cat]
             print('Getting Product IDs...')
+            print(category)
             last_page = self.get_page_cat(category['url'])
             page_responses = []
             page_responses.extend(await self.fetch_all_id_cat(category['url'], last_page))
             ids = s.parse_id(page_responses)
+            print(ids)
             print('Getting Details...')
             responses = []
             responses.extend(await self.fetch_all_detail(ids))
