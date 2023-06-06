@@ -68,6 +68,18 @@ class Download_link:
         element.send_keys(creds.pw + Keys.RETURN)
         wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, 'input#NavTextField')))
         cookies = driver.get_cookies()
+
+        print('Cleaning download asset...')
+        driver.get(self.base_url+'/AssetManager/Index.cfm')
+        while 1:
+            try:
+                WebDriverWait(driver, 20).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
+                break
+            except TimeoutException:
+                driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
+                driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
+                wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
+
         driver.close()
         return cookies
 
