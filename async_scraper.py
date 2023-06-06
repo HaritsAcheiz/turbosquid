@@ -37,9 +37,10 @@ class Scraper:
             'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
-        url = f'https://www.turbosquid.com/Search/3D-Models/free/{keyword}?page_size=500'
+        # url = f'https://www.turbosquid.com/Search/3D-Models/free/{keyword}?page_size=500'
+        url = f'https://www.turbosquid.com/3d-model/{keyword}?page_size=500'
         with httpx.Client() as client:
-            response = client.get(url)
+            response = client.get(url, follow_redirects=True)
         tree = HTMLParser(response.text)
         return tree.css_first('span#ts-total-pages').text()
 
@@ -58,6 +59,7 @@ class Scraper:
                 dict_cat['url'] = temp[0]+'/free/'+dict_cat['opt']+'?page_size=500'
             else:
                 dict_cat['url'] = temp[0]+'/Search/3D-Models/free/'+dict_cat['opt']+'?page_size=500'
+            # dict_cat['url'] = temp[0] + '/Search/3D-Models/free/' + dict_cat['opt'] + '?page_size=500'
             categories.append(dict_cat.copy())
         return categories
 
@@ -89,6 +91,7 @@ class Scraper:
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
 
+        # urls = [f'https://www.turbosquid.com/Search/3d-models/free/{keyword}?page_num={page_num}&page_size=500' for page_num in range(1, int(last_page)+1)]
         urls = [f'https://www.turbosquid.com/3d-model/free/{keyword}?page_num={page_num}&page_size=500' for page_num in range(1, int(last_page)+1)]
 
         async with httpx.AsyncClient(proxies=proxies) as client:
