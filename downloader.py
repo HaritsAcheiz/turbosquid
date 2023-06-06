@@ -29,7 +29,7 @@ class Download_link:
         # useragent = 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/113.0'
 
         ff_opt = Options()
-        ff_opt.add_argument('-headless')
+        # ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sandbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
@@ -127,67 +127,66 @@ class Download_link:
         # detail page
         wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.row_lab > div.shortContainer > div.purchaseSection > div.btn-container > a#FPAddToCart > button'))).click()
         while 1:
+            # download page
+            items = WebDriverWait(driver, 20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
+            for i in range(1, len(items) + 1):
+                while 1:
+                    try:
+                        item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
+                        item.get_attribute('class')
+                        break
+                    except StaleElementReferenceException:
+                        driver.refresh()
+                if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
+                    folder_name = item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]
+                    folderpath = os.path.join(os.getcwd(), fr"downloads\{folder_name}")
+                    print(f'Downloading {folder_name}...')
+                    os.makedirs(folderpath, exist_ok=True)
+                else:
+                    try:
+                        WebDriverWait(item, 20).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.RowAction.ActionShowAll'))).click()
+                    except:
+                        pass
+                    subitems = WebDriverWait(item, 20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'a')))
+
+                    # for j in range(1, len(subitems)+1):
+                    #     subitem = item.find_element(By.CSS_SELECTOR, f'a:nth-of-type({str(j)})')
+                    #     filepath = fr'{folderpath}\{subitem.text}'
+                    #     subitem.click()
+
+                    count_of_files = len(subitems)
+                    for subitem in subitems:
+                        subitem.click()
+                        time.sleep(5)
+
+                    print(f"Downloading {str(count_of_files)} items...")
+                    while True:
+                        tracker = []
+                        time.sleep(1)
+                        files = [item.lower() for item in os.listdir(self.download_directory)]
+                        if len(files) == count_of_files:
+                            all_downloads_completed = True
+                            for subitem in subitems:
+                                if subitem.text.lower().replace(' ', '_') not in files:
+                                    all_downloads_completed = False
+                                    break
+                                else:
+                                    tracker.append(subitem.text.lower().replace(' ', '_'))
+                            for i, item in enumerate(tracker):
+                                print(f'{item} download completed ({len(tracker)} of {str(count_of_files)})')
+                            if all_downloads_completed:
+                                break
+                    print(f"Download {folder_name} completed!")
+                    checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
+                    self.checklist(int(checklist_id))
+            driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
+            driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
+            wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
             try:
                 WebDriverWait(driver, 20).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
                 break
             except TimeoutException:
-
-                # download page
                 driver.refresh()
-                items = WebDriverWait(driver, 20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
-                for i in range(1, len(items) + 1):
-                    while 1:
-                        try:
-                            item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
-                            item.get_attribute('class')
-                            break
-                        except StaleElementReferenceException:
-                            driver.refresh()
-                    if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
-                        folder_name = item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]
-                        folderpath = os.path.join(os.getcwd(), fr"downloads\{folder_name}")
-                        print(f'Downloading {folder_name}...')
-                        os.makedirs(folderpath, exist_ok=True)
-                    else:
-                        try:
-                            WebDriverWait(item, 20).until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.RowAction.ActionShowAll'))).click()
-                        except:
-                            pass
-                        subitems = WebDriverWait(item, 20).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'a')))
-
-                        # for j in range(1, len(subitems)+1):
-                        #     subitem = item.find_element(By.CSS_SELECTOR, f'a:nth-of-type({str(j)})')
-                        #     filepath = fr'{folderpath}\{subitem.text}'
-                        #     subitem.click()
-
-                        count_of_files = len(subitems)
-                        for subitem in subitems:
-                            subitem.click()
-                            time.sleep(5)
-
-                        print(f"Downloading {str(count_of_files)} items...")
-                        while True:
-                            tracker = []
-                            time.sleep(1)
-                            files = [item.lower() for item in os.listdir(self.download_directory)]
-                            if len(files) == count_of_files:
-                                all_downloads_completed = True
-                                for subitem in subitems:
-                                    if subitem.text.lower().replace(' ', '_') not in files:
-                                        all_downloads_completed = False
-                                        break
-                                    else:
-                                        tracker.append(subitem.text.lower().replace(' ', '_'))
-                                for i, item in enumerate(tracker):
-                                    print(f'{item} download completed ({len(tracker)} of {str(count_of_files)})')
-                                if all_downloads_completed:
-                                    break
-                        print(f"Download {folder_name} completed!")
-                        checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
-                        self.checklist(int(checklist_id))
-                driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
-                driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
-                wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
         time.sleep(3)
         print('All downloads completed!')
         driver.close()
@@ -220,17 +219,17 @@ class Download_link:
                         print(f"Adding item {id}...({i} of {len(free_ids)})")
                         self.exportItem(id, cookies=cookies)
                         break
-                    except Exception as e:
+                    except TimeoutException as e:
                         print(f"Retrying due to error {e}")
                         time.sleep(retry_delay)
                 else:
-                    # try:
-                    print(f"Adding item {id}...({i} of {len(free_ids)})")
-                    self.toDownloadPage(id, cookies=cookies)
-                    break
-                    # except Exception as e:
-                    #     print(f"Retrying due to error {e}")
-                    #     time.sleep(retry_delay)
+                    try:
+                        print(f"Adding item {id}...({i} of {len(free_ids)})")
+                        self.toDownloadPage(id, cookies=cookies)
+                        break
+                    except TimeoutException as e:
+                        print(f"Retrying due to error {e}")
+                        time.sleep(retry_delay)
 
 if __name__ == '__main__':
     d = Download_link()
