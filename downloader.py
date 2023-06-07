@@ -29,7 +29,7 @@ class Download_link:
         # useragent = 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/113.0'
 
         ff_opt = Options()
-        # ff_opt.add_argument('-headless')
+        ff_opt.add_argument('-headless')
         ff_opt.add_argument('--no-sandbox')
         ff_opt.set_preference("general.useragent.override", useragent)
         ff_opt.page_load_strategy = 'eager'
@@ -111,7 +111,12 @@ class Download_link:
             # Move the file to the destination folder
             shutil.move(source_file, destination_file)
         print('Completed !')
-        return destination_folder.split('-')[-1]
+        id = destination_folder.split('-')
+        print(len(id))
+        if len(id) != 1:
+            return id[-1]
+        else:
+            return destination_folder.split('\\')[-1]
 
     def checklist(self, id):
         folder_path = os.path.join(os.getcwd(), 'ids')
