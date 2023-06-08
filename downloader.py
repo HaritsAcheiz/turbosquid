@@ -130,7 +130,7 @@ class Download_link:
         combined_df = pd.concat(data_list, ignore_index=True)
         combined_df.loc[combined_df['product_id'] == id, 'checklist'] = True
         combined_df.to_csv(file_paths[0], index=False)
-        print(f'Item {id} checked! \n')
+        print(f'Item {id} checked!')
 
     def toDownloadPage(self, id, cookies):
         driver = self.webdriver_setup()
@@ -162,7 +162,7 @@ class Download_link:
                 if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
                     folder_name = item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]
                     folderpath = os.path.join(os.getcwd(), fr"downloads\{folder_name}")
-                    print(f'Downloading {folder_name}...')
+                    print(f'\n Downloading {folder_name}...')
                     os.makedirs(folderpath, exist_ok=True)
                 else:
                     try:
