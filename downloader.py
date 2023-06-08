@@ -162,7 +162,7 @@ class Download_link:
                 if item.get_attribute('class') != 'ProductFileRow ThumbnailsRow show':
                     folder_name = item.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').strip().split('/')[-1]
                     folderpath = os.path.join(os.getcwd(), fr"downloads\{folder_name}")
-                    print(f'\n Downloading {folder_name}...')
+                    print(f'\nDownloading {folder_name}...')
                     os.makedirs(folderpath, exist_ok=True)
                 else:
                     try:
@@ -202,13 +202,12 @@ class Download_link:
             wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
             try:
                 WebDriverWait(driver, 20).until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div#divEmptyStateScreenContainer')))
-                print('download complete triggered')
+                print('All downloads completed!')
                 break
             except TimeoutException:
                 print('Timeout')
                 driver.refresh()
         time.sleep(3)
-        print('All downloads completed!')
         driver.close()
 
     def get_free_ids(self):
