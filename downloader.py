@@ -144,7 +144,8 @@ class Download_link:
 
         # detail page
         wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'div.row_lab > div.shortContainer > div.purchaseSection > div.btn-container > a#FPAddToCart > button'))).click()
-
+        successes = 0
+        errors = 0
         while 1:
             # download page
             WebDriverWait(driver, 10).until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')))
@@ -153,6 +154,7 @@ class Download_link:
             items = driver.find_elements(By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')
             print(len(items))
             for i in range(1, len(items) + 1):
+                os.makedirs(self.download_directory, exist_ok=True)
                 while 1:
                     try:
                         item = wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, f'tbody.yui-dt-data > tr:nth-of-type({str(i)})')))
@@ -203,8 +205,11 @@ class Download_link:
                         print(f"\n Download {folder_name} completed!")
                         checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
                         self.checklist(int(checklist_id))
+                        successes += 1
                     else:
                         print(f"\n Download {folder_name} failed!")
+                        errors += 1
+                    os.removedirs(self.download_directory)
             driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
             driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
             wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
@@ -215,6 +220,7 @@ class Download_link:
             except TimeoutException:
                 print('Timeout')
                 driver.refresh()
+        print(f"Status (Successes:{successes}, Errors:{errors})")
         time.sleep(3)
         driver.close()
 
@@ -236,7 +242,6 @@ class Download_link:
         cookies = self.getCookies()
         print("Reading ids...")
         free_ids = self.get_free_ids()
-        os.makedirs(self.download_directory, exist_ok=True)
         for i, id in enumerate(free_ids, start=1):
             retries = 3
             retry_delay = 1
