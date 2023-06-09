@@ -151,6 +151,7 @@ class Download_link:
             select = Select(driver.find_element(By.CSS_SELECTOR, 'select[title="Rows per page"]'))
             select.select_by_value("500")
             items = driver.find_elements(By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')
+            print(len(items))
             for i in range(1, len(items) + 1):
                 while 1:
                     try:
@@ -177,8 +178,11 @@ class Download_link:
                         time.sleep(5)
 
                     print(f"Downloading {str(count_of_files)} items...")
-                    while True:
+                    counter = 0
+                    success = False
+                    while counter < 900:
                         print('.', end='')
+                        counter +=1
                         tracker = []
                         time.sleep(1)
                         files = [item.lower() for item in os.listdir(self.download_directory)]
@@ -193,10 +197,14 @@ class Download_link:
                                 # for i, item in enumerate(tracker):
                                 #     print(f'{item} download completed ({len(tracker)} of {str(count_of_files)})')
                             if all_downloads_completed:
+                                success = True
                                 break
-                    print(f"\n Download {folder_name} completed!")
-                    checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
-                    self.checklist(int(checklist_id))
+                    if success == True:
+                        print(f"\n Download {folder_name} completed!")
+                        checklist_id = self.moveFiles(source_folder=self.download_directory, destination_folder=folderpath)
+                        self.checklist(int(checklist_id))
+                    else:
+                        print(f"\n Download {folder_name} failed!")
             driver.find_element(By.CSS_SELECTOR, 'input.cbItemSelectAll').click()
             driver.find_element(By.CSS_SELECTOR, 'div#miRemove').click()
             wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR, 'span.yui-button:nth-child(1)'))).click()
