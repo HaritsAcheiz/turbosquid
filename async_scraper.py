@@ -5,6 +5,14 @@ from dataclasses import dataclass, asdict
 import re
 import csv
 import os
+
+from selenium.webdriver import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.wait import WebDriverWait
+
 import creds
 
 @dataclass
@@ -32,6 +40,45 @@ class Scraper:
     latitude: float = -6.2088
     longitude: float = 106.8456
 
+    def webdriver_setup(self):
+        useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        # useragent = 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/113.0'
+
+        ff_opt = Options()
+        ff_opt.add_argument('-headless')
+        ff_opt.add_argument('--no-sandbox')
+        ff_opt.set_preference("general.useragent.override", useragent)
+        ff_opt.page_load_strategy = 'eager'
+
+        # geolocation
+        # latitude = 37.7749
+        # longitude = -122.4194
+        # ff_opt.set_preference('geo.enabled', True)
+        # ff_opt.set_preference('geo.provider.use_corelocation', False)
+        # ff_opt.set_preference('geo.prompt.testing', True)
+        # ff_opt.set_preference('geo.prompt.testing.allow', True)
+        # ff_opt.set_preference('geo.wifi.uri', 'data:application/json,{"location": {"lat": ' + str(latitude) + ', "lng": ' + str(longitude) + '}, "accuracy": 100.0}')
+
+        # download folder
+        ff_opt.set_preference("browser.download.folderList", 2)
+        ff_opt.set_preference("browser.download.manager.showWhenStarting", False)
+        ff_opt.set_preference("browser.download.dir", self.download_directory)
+        ff_opt.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream")
+
+        driver = WebDriver(options=ff_opt)
+        return driver
+
+
+    def find_url(self, keyword):
+        driver = self.webdriver_setup()
+        driver.maximize_window()
+        driver.get(self.base_url)
+        wait = WebDriverWait(driver, 15)
+        wait.until(expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'input#NavTextField'))).click()
+        driver.find_element(By.CSS_SELECTOR, 'input#NavTextField').send_keys(keyword + Keys.RETURN)
+        wait.until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'div.TileContainer')))
+        return driver.current_url
+
     def get_page(self, keyword):
         proxies = {
             'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
@@ -43,6 +90,18 @@ class Scraper:
             response = client.get(url, follow_redirects=True)
         tree = HTMLParser(response.text)
         return tree.css_first('span#ts-total-pages').text()
+
+    def get_page_url(self, url):
+        proxies = {
+            'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
+            'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
+        }
+        parsed_url = url.split('/')
+        searcing_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/free/{parsed_url[4]}&page_size=500"
+        with httpx.Client() as client:
+            response = client.get(searcing_url, follow_redirects=True)
+        tree = HTMLParser(response.text)
+        return searcing_url, tree.css_first('span#ts-total-pages').text()
 
     def get_top_category(self):
         url = 'https://www.turbosquid.com/Search/3D-Models'
@@ -99,6 +158,20 @@ class Scraper:
             responses = await asyncio.gather(*tasks, return_exceptions=True)
             return responses
 
+    async def fetch_all_id_url(self, searching_url, last_page):
+        proxies = {
+            'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
+            'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
+        }
+
+        # urls = [f'https://www.turbosquid.com/Search/3d-models/free/{keyword}?page_num={page_num}&page_size=500' for page_num in range(1, int(last_page)+1)]
+        urls = [searching_url + f"&page_num={page_num}" for page_num in range(1, int(last_page) + 1)]
+
+        async with httpx.AsyncClient(proxies=proxies) as client:
+            tasks = [asyncio.create_task(self.fetch_id(client, url)) for url in urls]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            return responses
+
     async def fetch_all_id_cat(self, url, last_page):
         proxies = {
             'http://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}',
@@ -119,6 +192,7 @@ class Scraper:
         for response in responses:
             tree = HTMLParser(response)
             staging = tree.css(staging_loc)
+            print(len(staging))
             item_ids.extend([article.css_first(detail_url_loc).attributes['data-id'] for article in staging])
         return item_ids
 
@@ -260,9 +334,11 @@ class Scraper:
         if method == 1:
             keyword = input('What do you want to search? ').replace(' ','-')
             print('Getting Product IDs...')
-            last_page = self.get_page(keyword)
+            url = self.find_url(keyword)
+            # last_page = self.get_page(keyword)
+            searching_url, last_page = self.get_page_url(url)
             page_responses = []
-            page_responses.extend(await self.fetch_all_id(keyword, last_page))
+            page_responses.extend(await self.fetch_all_id_url(searching_url, last_page))
             ids = s.parse_id(page_responses)
             print('Getting Details...')
             responses = []
