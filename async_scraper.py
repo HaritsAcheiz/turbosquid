@@ -77,7 +77,9 @@ class Scraper:
         wait.until(expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'input#NavTextField'))).click()
         driver.find_element(By.CSS_SELECTOR, 'input#NavTextField').send_keys(keyword + Keys.RETURN)
         wait.until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'div.TileContainer')))
-        return driver.current_url
+        result = driver.current_url
+        driver.close()
+        return result
 
     def get_page(self, keyword):
         proxies = {
@@ -97,11 +99,14 @@ class Scraper:
             'https://': f'http://{creds.proxy_username}:{creds.proxy_password}@{creds.proxy_url}:{creds.proxy_port}'
         }
         parsed_url = url.split('/')
-        searcing_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/free/{parsed_url[4]}&page_size=500"
+        if parsed_url[3] != 'Search':
+            searching_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/free/{parsed_url[4]}&page_size=500"
+        else:
+            searching_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/3D-Models/free/{parsed_url[4][parsed_url[4].find('=') + 1 :parsed_url[4].find('&')]}?page_size=500"
         with httpx.Client() as client:
-            response = client.get(searcing_url, follow_redirects=True)
+            response = client.get(searching_url, follow_redirects=True)
         tree = HTMLParser(response.text)
-        return searcing_url, tree.css_first('span#ts-total-pages').text()
+        return searching_url, tree.css_first('span#ts-total-pages').text()
 
     def get_top_category(self):
         url = 'https://www.turbosquid.com/Search/3D-Models'
@@ -118,7 +123,6 @@ class Scraper:
                 dict_cat['url'] = temp[0]+'/free/'+dict_cat['opt']+'?page_size=500'
             else:
                 dict_cat['url'] = temp[0]+'/Search/3D-Models/free/'+dict_cat['opt']+'?page_size=500'
-            # dict_cat['url'] = temp[0] + '/Search/3D-Models/free/' + dict_cat['opt'] + '?page_size=500'
             categories.append(dict_cat.copy())
         return categories
 
@@ -188,12 +192,12 @@ class Scraper:
     def parse_id(self, responses):
         staging_loc = 'div#SearchResultAssets > div.search-lab.AssetTile-md.tile-large'
         detail_url_loc = 'div.AssetInner > div'
+        free_loc = 'div.AssetInner > div:nth-of-type(2)'
         item_ids = []
         for response in responses:
             tree = HTMLParser(response)
             staging = tree.css(staging_loc)
-            print(len(staging))
-            item_ids.extend([article.css_first(detail_url_loc).attributes['data-id'] for article in staging])
+            item_ids.extend([article.css_first(detail_url_loc).attributes['data-id'] for article in staging if article.css_first(free_loc).text()=='Free'])
         return item_ids
 
     async def fetch_detail(self, client, url):
