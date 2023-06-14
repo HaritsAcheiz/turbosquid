@@ -103,10 +103,16 @@ class Scraper:
             searching_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/free/{parsed_url[4]}&page_size=500"
         else:
             searching_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/3D-Models/free/{parsed_url[4][parsed_url[4].find('=') + 1 :parsed_url[4].find('&')]}?page_size=500"
-        with httpx.Client() as client:
-            response = client.get(searching_url, follow_redirects=True)
-        tree = HTMLParser(response.text)
-        return searching_url, tree.css_first('span#ts-total-pages').text()
+        while 1:
+            with httpx.Client() as client:
+                response = client.get(searching_url, follow_redirects=True)
+            tree = HTMLParser(response.text)
+            if tree.css_first('span#ts-total-pages'):
+                last_page = tree.css_first('span#ts-total-pages').text()
+                break
+            else:
+                searching_url = f"{parsed_url[0]}/{parsed_url[1]}/{parsed_url[2]}/{parsed_url[3]}/3D-Models/free/{parsed_url[4][parsed_url[4].find('=') + 1 :parsed_url[4].find('&')]}"
+        return searching_url, last_page
 
     def get_top_category(self):
         url = 'https://www.turbosquid.com/Search/3D-Models'
