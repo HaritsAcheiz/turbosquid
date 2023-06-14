@@ -152,7 +152,7 @@ class Download_link:
             select = Select(driver.find_element(By.CSS_SELECTOR, 'select[title="Rows per page"]'))
             select.select_by_value("500")
             items = driver.find_elements(By.CSS_SELECTOR, 'tbody.yui-dt-data > tr')
-            print(len(items))
+
             for i in range(1, len(items) + 1):
                 os.makedirs(self.download_directory, exist_ok=True)
                 while 1:
@@ -242,6 +242,7 @@ class Download_link:
         cookies = self.getCookies()
         print("Reading ids...")
         free_ids = self.get_free_ids()
+
         for i, id in enumerate(free_ids, start=1):
             retries = 3
             retry_delay = 1
